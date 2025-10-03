@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unscheduled Jobs - Impressive Batteries</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-top: 0.3rem;
+        }
+
+        #map {
+            flex: 1;
+            width: 100%;
+        }
+
+        .info-window {
+            max-width: 300px;
+            font-size: 14px;
+        }
+
+        .info-window h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .info-window .field {
+            margin: 5px 0;
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .info-window .field:last-child {
+            border-bottom: none;
+        }
+
+        .info-window .label {
+            font-weight: 600;
+            color: #555;
+            margin-right: 5px;
+        }
+
+        .info-window .value {
+            color: #333;
+        }
+
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 2rem 3rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            z-index: 1000;
+            text-align: center;
+        }
+
+        .loading.hidden {
+            display: none;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats {
+            background: white;
+            padding: 0.8rem 2rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+
+        .stats-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .stats-number {
+            font-weight: 700;
+            color: #667eea;
+            font-size: 1.2rem;
+        }
+
+        .error-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            z-index: 1000;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        .error-message.hidden {
+            display: none;
+        }
+
+        .error-message h3 {
+            color: #e74c3c;
+            margin-bottom: 1rem;
+        }
+
+        .error-message code {
+            display: block;
+            background: #f5f5f5;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-top: 1rem;
+            text-align: left;
+            font-size: 0.85rem;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🔋 Unscheduled Jobs - Impressive Batteries</h1>
+        <div class="subtitle">Installation Locations Map</div>
+    </header>
+
+    <div class="stats" id="stats">
+        <div class="stats-item">
+            <span>Total Jobs:</span>
+            <span class="stats-number" id="totalJobs">0</span>
+        </div>
+        <div class="stats-item">
+            <span>Loaded:</span>
+            <span class="stats-number" id="loadedJobs">0</span>
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div>Loading job locations...</div>
+    </div>
+
+    <div class="error-message hidden" id="error">
+        <h3>⚠️ Configuration Needed</h3>
+        <p id="errorText"></p>
+    </div>
+
+    <script>
+        // ========================================
+        // CONFIGURATION - REPLACE THESE VALUES
+        // ========================================
+        
+        const CONFIG = {
+            // Get this from: https://console.cloud.google.com/
+            GOOGLE_MAPS_API_KEY: 'AIzaSyD0p3J2nqCRJNJg7pWDHjqfbR2JUfyVnto',
+            
+            // Your Google Sheets ID from the URL
+            // Example: https://docs.google.com/spreadsheets/d/SPREADSHEET_ID_HERE/edit
+            GOOGLE_SHEETS_ID: '1qDcE1j41nkvyP1TWEa3T_E_A1ZXzFWeVJH8bNaHi390',
+            
+            // The name of your sheet/tab (default is usually "Sheet1")
+            SHEET_NAME: 'Sheet1',
+            
+            // Column mapping - adjust these to match your spreadsheet columns
+            // Use 0 for column A, 1 for column B, 2 for column C, etc.
+            COLUMNS: {
+                recordId: 0,          // Column A - Record ID
+                customerName: 1,      // Column B - Customer Name
+                projectAddress: 2,    // Column C - Project Address
+                latitude: 3,          // Column D - Latitude
+                longitude: 4,         // Column E - Longitude
+                systemSize: 5,        // Column F - System Size [kW]
+                batterySize: 6,       // Column G - Battery Size [kWh]
+                phases: 7,            // Column H - Phases
+                batteryLocation: 8,   // Column I - Battery Location
+                installationDate: 9   // Column J - Installation date
+            },
+            
+            // Default map center (will auto-adjust to show all markers)
+            DEFAULT_CENTER: { lat: -33.8688, lng: 151.2093 }, // Sydney, Australia
+            DEFAULT_ZOOM: 10
+        };
+
+        // ========================================
+        // APPLICATION CODE
+        // ========================================
+
+        let map;
+        let markers = [];
+        let infoWindow;
+
+        // Initialize the map
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: CONFIG.DEFAULT_ZOOM,
+                center: CONFIG.DEFAULT_CENTER,
+                styles: [
+                    {
+                        featureType: 'poi',
+                        elementType: 'labels',
+                        stylers: [{ visibility: 'off' }]
+                    }
+                ]
+            });
+
+            infoWindow = new google.maps.InfoWindow();
+
+            // Load data from Google Sheets
+            loadSheetData();
+        }
+
+        // Load data from Google Sheets
+        async function loadSheetData() {
+            try {
+                // Check if API keys are configured
+                if (CONFIG.GOOGLE_MAPS_API_KEY === 'YOUR_GOOGLE_MAPS_API_KEY_HERE' || 
+                    CONFIG.GOOGLE_SHEETS_ID === 'YOUR_GOOGLE_SHEETS_ID_HERE') {
+                    showError('Please update the configuration in index.html with your Google Maps API Key and Sheets ID.');
+                    return;
+                }
+
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEETS_ID}/values/${CONFIG.SHEET_NAME}?key=${CONFIG.GOOGLE_MAPS_API_KEY}`;
+                
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch data: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (!data.values || data.values.length === 0) {
+                    showError('No data found in the spreadsheet.');
+                    return;
+                }
+
+                // Skip header row (first row)
+                const rows = data.values.slice(1);
+                
+                processJobData(rows);
+                
+            } catch (error) {
+                console.error('Error loading sheet data:', error);
+                showError(`Error loading data: ${error.message}`);
+            }
+        }
+
+        // Process job data and create markers
+        function processJobData(rows) {
+            const bounds = new google.maps.LatLngBounds();
+            let validCount = 0;
+
+            rows.forEach((row, index) => {
+                const lat = parseFloat(row[CONFIG.COLUMNS.latitude]);
+                const lng = parseFloat(row[CONFIG.COLUMNS.longitude]);
+
+                // Validate coordinates
+                if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
+                    console.warn(`Skipping row ${index + 2}: Invalid coordinates`, row);
+                    return;
+                }
+
+                const position = { lat, lng };
+                
+                // Create marker
+                const marker = new google.maps.Marker({
+                    position: position,
+                    map: map,
+                    title: row[CONFIG.COLUMNS.customerName] || `Job ${index + 1}`,
+                    animation: google.maps.Animation.DROP
+                });
+
+                // Create info window content
+                const content = createInfoWindowContent(row, index);
+
+                // Add click listener
+                marker.addListener('click', () => {
+                    infoWindow.setContent(content);
+                    infoWindow.open(map, marker);
+                });
+
+                markers.push(marker);
+                bounds.extend(position);
+                validCount++;
+            });
+
+            // Update stats
+            document.getElementById('totalJobs').textContent = rows.length;
+            document.getElementById('loadedJobs').textContent = validCount;
+
+            // Fit map to markers
+            if (validCount > 0) {
+                if (validCount === 1) {
+                    map.setCenter(markers[0].getPosition());
+                    map.setZoom(15);
+                } else {
+                    map.fitBounds(bounds);
+                }
+            }
+
+            // Hide loading
+            document.getElementById('loading').classList.add('hidden');
+        }
+
+        // Create info window HTML content
+        function createInfoWindowContent(row, index) {
+            const customerName = row[CONFIG.COLUMNS.customerName] || 'Unknown Customer';
+            const projectAddress = row[CONFIG.COLUMNS.projectAddress] || '';
+            const systemSize = row[CONFIG.COLUMNS.systemSize] || '';
+            const batterySize = row[CONFIG.COLUMNS.batterySize] || '';
+            const phases = row[CONFIG.COLUMNS.phases] || '';
+            const batteryLocation = row[CONFIG.COLUMNS.batteryLocation] || '';
+
+            let html = `<div class="info-window">`;
+            html += `<h3>${escapeHtml(customerName)}</h3>`;
+            
+            if (projectAddress) {
+                html += `<div class="field">
+                    <span class="label">📍 Address:</span>
+                    <span class="value">${escapeHtml(projectAddress)}</span>
+                </div>`;
+            }
+            
+            if (systemSize) {
+                html += `<div class="field">
+                    <span class="label">⚡ System Size:</span>
+                    <span class="value">${escapeHtml(systemSize)} kW</span>
+                </div>`;
+            }
+            
+            if (batterySize) {
+                html += `<div class="field">
+                    <span class="label">🔋 Battery Size:</span>
+                    <span class="value">${escapeHtml(batterySize)} kWh</span>
+                </div>`;
+            }
+            
+            if (phases) {
+                html += `<div class="field">
+                    <span class="label">🔌 Phases:</span>
+                    <span class="value">${escapeHtml(phases)}</span>
+                </div>`;
+            }
+            
+            if (batteryLocation) {
+                html += `<div class="field">
+                    <span class="label">📦 Battery Location:</span>
+                    <span class="value">${escapeHtml(batteryLocation)}</span>
+                </div>`;
+            }
+            
+            html += `</div>`;
+            return html;
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Show error message
+        function showError(message) {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('errorText').textContent = message;
+            document.getElementById('error').classList.remove('hidden');
+        }
+
+        // Load Google Maps API
+        function loadGoogleMapsScript() {
+            if (CONFIG.GOOGLE_MAPS_API_KEY === 'YOUR_GOOGLE_MAPS_API_KEY_HERE') {
+                showError('Please configure your Google Maps API Key in the index.html file.');
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${CONFIG.GOOGLE_MAPS_API_KEY}&callback=initMap`;
+            script.async = true;
+            script.defer = true;
+            script.onerror = () => {
+                showError('Failed to load Google Maps. Please check your API key and internet connection.');
+            };
+            document.head.appendChild(script);
+        }
+
+        // Start the application
+        window.addEventListener('load', loadGoogleMapsScript);
+    </script>
+</body>
+</html>
+

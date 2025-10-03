@@ -1,0 +1,21 @@
+# Vercel
+.vercel
+
+# Node modules (if you add any build tools later)
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment variables (if you create any)
+.env
+.env.local
+.env.production
+
