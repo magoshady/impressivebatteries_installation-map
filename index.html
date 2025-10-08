@@ -311,7 +311,7 @@
                 </div>
                 <div class="legend-item">
                     <div class="legend-icon green"></div>
-                    <span>Solar + Battery</span>
+                    <span>Solar & Battery</span>
                 </div>
                 <div class="legend-item">
                     <div class="legend-icon red"></div>
@@ -379,7 +379,7 @@
             
             if (type.includes('solar only') || type === 'solar only') {
                 return 'yellow';
-            } else if (type.includes('solar + battery') || type.includes('solar+battery') || type === 'solar + battery') {
+            } else if (type.includes('solar & battery') || type.includes('solar&battery') || type.includes('solar and battery')) {
                 return 'green';
             } else if (type.includes('battery only') || type === 'battery only') {
                 return 'red';
