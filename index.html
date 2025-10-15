@@ -182,6 +182,14 @@
             display: flex;
             align-items: center;
             margin: 8px 0;
+            cursor: pointer;
+        }
+
+        .filter-checkbox {
+            margin-right: 8px;
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
         }
 
         .legend-icon {
@@ -277,6 +285,16 @@
 
         let map;
         let markers = [];
+        let markersByType = {
+            'yellow': [],
+            'green': [],
+            'red': []
+        };
+        let systemTypeCounts = {
+            'yellow': 0,
+            'green': 0,
+            'red': 0
+        };
         let infoWindow;
 
         // Initialize the map
@@ -306,22 +324,36 @@
             legend.innerHTML = `
                 <h3>System Types</h3>
                 <div class="legend-item">
+                    <input type="checkbox" id="filter-yellow" class="filter-checkbox" checked>
                     <div class="legend-icon yellow"></div>
-                    <span>Solar Only</span>
+                    <span>Solar Only <span id="count-yellow">(0)</span></span>
                 </div>
                 <div class="legend-item">
+                    <input type="checkbox" id="filter-green" class="filter-checkbox" checked>
                     <div class="legend-icon green"></div>
-                    <span>Solar & Battery</span>
+                    <span>Solar & Battery <span id="count-green">(0)</span></span>
                 </div>
                 <div class="legend-item">
+                    <input type="checkbox" id="filter-red" class="filter-checkbox" checked>
                     <div class="legend-icon red"></div>
-                    <span>Battery Only</span>
+                    <span>Battery Only <span id="count-red">(0)</span></span>
                 </div>
             `;
             
-            // Close info window when clicking on legend
-            legend.addEventListener('click', () => {
-                infoWindow.close();
+            // Add filter event listeners
+            legend.querySelectorAll('.filter-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', (e) => {
+                    e.stopPropagation(); // Prevent closing info window
+                    const color = checkbox.id.replace('filter-', '');
+                    toggleMarkersByType(color, checkbox.checked);
+                });
+            });
+            
+            // Prevent closing info window when clicking on legend (except checkboxes)
+            legend.addEventListener('click', (e) => {
+                if (!e.target.classList.contains('filter-checkbox')) {
+                    e.stopPropagation();
+                }
             });
             
             map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(legend);
@@ -395,6 +427,25 @@
             return `http://maps.google.com/mapfiles/ms/icons/${color}-dot.png`;
         }
 
+        // Toggle markers visibility by type
+        function toggleMarkersByType(color, show) {
+            markersByType[color].forEach(marker => {
+                marker.setVisible(show);
+            });
+            
+            // Close info window if currently open marker is being hidden
+            if (!show) {
+                infoWindow.close();
+            }
+        }
+
+        // Update legend counts
+        function updateLegendCounts() {
+            document.getElementById('count-yellow').textContent = `(${systemTypeCounts.yellow})`;
+            document.getElementById('count-green').textContent = `(${systemTypeCounts.green})`;
+            document.getElementById('count-red').textContent = `(${systemTypeCounts.red})`;
+        }
+
         // Process job data and create markers
         function processJobData(rows) {
             const bounds = new google.maps.LatLngBounds();
@@ -435,6 +486,8 @@
                 });
 
                 markers.push(marker);
+                markersByType[markerColor].push(marker);
+                systemTypeCounts[markerColor]++;
                 bounds.extend(position);
                 validCount++;
             });
@@ -452,6 +505,9 @@
                     map.fitBounds(bounds);
                 }
             }
+
+            // Update legend with counts
+            updateLegendCounts();
 
             // Hide loading
             document.getElementById('loading').classList.add('hidden');
