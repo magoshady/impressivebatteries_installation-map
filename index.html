@@ -296,6 +296,7 @@
             'red': 0
         };
         let infoWindow;
+        let legendElement;
 
         // Initialize the map
         function initMap() {
@@ -319,9 +320,9 @@
             });
 
             // Add legend to map
-            const legend = document.createElement('div');
-            legend.className = 'map-legend';
-            legend.innerHTML = `
+            legendElement = document.createElement('div');
+            legendElement.className = 'map-legend';
+            legendElement.innerHTML = `
                 <h3>System Types</h3>
                 <div class="legend-item">
                     <input type="checkbox" id="filter-yellow" class="filter-checkbox" checked>
@@ -341,7 +342,7 @@
             `;
             
             // Add filter event listeners
-            legend.querySelectorAll('.filter-checkbox').forEach(checkbox => {
+            legendElement.querySelectorAll('.filter-checkbox').forEach(checkbox => {
                 checkbox.addEventListener('change', (e) => {
                     e.stopPropagation(); // Prevent closing info window
                     const color = checkbox.id.replace('filter-', '');
@@ -350,13 +351,13 @@
             });
             
             // Prevent closing info window when clicking on legend (except checkboxes)
-            legend.addEventListener('click', (e) => {
+            legendElement.addEventListener('click', (e) => {
                 if (!e.target.classList.contains('filter-checkbox')) {
                     e.stopPropagation();
                 }
             });
             
-            map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(legend);
+            map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(legendElement);
 
             // Close info window when clicking on stats bar or header
             document.getElementById('stats').addEventListener('click', () => {
@@ -441,15 +442,29 @@
 
         // Update legend counts
         function updateLegendCounts() {
-            document.getElementById('count-yellow').textContent = `(${systemTypeCounts.yellow})`;
-            document.getElementById('count-green').textContent = `(${systemTypeCounts.green})`;
-            document.getElementById('count-red').textContent = `(${systemTypeCounts.red})`;
+            if (!legendElement) return;
+            
+            const yellowCount = legendElement.querySelector('#count-yellow');
+            const greenCount = legendElement.querySelector('#count-green');
+            const redCount = legendElement.querySelector('#count-red');
+            
+            if (yellowCount) yellowCount.textContent = `(${systemTypeCounts.yellow})`;
+            if (greenCount) greenCount.textContent = `(${systemTypeCounts.green})`;
+            if (redCount) redCount.textContent = `(${systemTypeCounts.red})`;
         }
 
         // Process job data and create markers
         function processJobData(rows) {
             const bounds = new google.maps.LatLngBounds();
             let validCount = 0;
+
+            // Reset counts and arrays
+            systemTypeCounts.yellow = 0;
+            systemTypeCounts.green = 0;
+            systemTypeCounts.red = 0;
+            markersByType.yellow = [];
+            markersByType.green = [];
+            markersByType.red = [];
 
             rows.forEach((row, index) => {
                 const lat = parseFloat(row[CONFIG.COLUMNS.latitude]);
@@ -466,6 +481,11 @@
                 // Get system type and determine marker color
                 const systemType = row[CONFIG.COLUMNS.systemType] || '';
                 const markerColor = getMarkerColor(systemType);
+                
+                // Debug: log first few system types
+                if (index < 5) {
+                    console.log(`Row ${index}: System Type = "${systemType}", Color = ${markerColor}`);
+                }
                 
                 // Create marker
                 const marker = new google.maps.Marker({
@@ -507,6 +527,7 @@
             }
 
             // Update legend with counts
+            console.log('Final counts:', systemTypeCounts);
             updateLegendCounts();
 
             // Hide loading
