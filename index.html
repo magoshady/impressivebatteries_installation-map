@@ -211,6 +211,10 @@
         .legend-icon.red {
             background-color: #F44336;
         }
+
+        .legend-icon.purple {
+            background-color: #9C27B0;
+        }
     </style>
 </head>
 <body>
@@ -271,7 +275,8 @@
                 phases: 7,            // Column H - Phases
                 batteryLocation: 8,   // Column I - Battery Location
                 installationDate: 9,  // Column J - Installation date
-                systemType: 11        // Column L - System Type (Solar Only, Battery Only, Solar + Battery)
+                systemType: 11,       // Column L - System Type (Solar Only, Battery Only, Solar + Battery)
+                inverterModel: 12     // Column M - Inverter Model (ESYSUNHOME HM10/15/20)
             },
             
             // Default map center (will auto-adjust to show all markers)
@@ -288,12 +293,14 @@
         let markersByType = {
             'yellow': [],
             'green': [],
-            'red': []
+            'red': [],
+            'purple': []
         };
         let systemTypeCounts = {
             'yellow': 0,
             'green': 0,
-            'red': 0
+            'red': 0,
+            'purple': 0
         };
         let infoWindow;
         let legendElement;
@@ -338,6 +345,11 @@
                     <input type="checkbox" id="filter-red" class="filter-checkbox" checked>
                     <div class="legend-icon red"></div>
                     <span>Battery Only <span id="count-red">(0)</span></span>
+                </div>
+                <div class="legend-item">
+                    <input type="checkbox" id="filter-purple" class="filter-checkbox" checked>
+                    <div class="legend-icon purple"></div>
+                    <span>HM10/15/20 <span id="count-purple">(0)</span></span>
                 </div>
             `;
             
@@ -447,10 +459,12 @@
             const yellowCount = legendElement.querySelector('#count-yellow');
             const greenCount = legendElement.querySelector('#count-green');
             const redCount = legendElement.querySelector('#count-red');
+            const purpleCount = legendElement.querySelector('#count-purple');
             
             if (yellowCount) yellowCount.textContent = `(${systemTypeCounts.yellow})`;
             if (greenCount) greenCount.textContent = `(${systemTypeCounts.green})`;
             if (redCount) redCount.textContent = `(${systemTypeCounts.red})`;
+            if (purpleCount) purpleCount.textContent = `(${systemTypeCounts.purple})`;
         }
 
         // Process job data and create markers
@@ -462,9 +476,11 @@
             systemTypeCounts.yellow = 0;
             systemTypeCounts.green = 0;
             systemTypeCounts.red = 0;
+            systemTypeCounts.purple = 0;
             markersByType.yellow = [];
             markersByType.green = [];
             markersByType.red = [];
+            markersByType.purple = [];
 
             rows.forEach((row, index) => {
                 const lat = parseFloat(row[CONFIG.COLUMNS.latitude]);
@@ -478,13 +494,21 @@
 
                 const position = { lat, lng };
                 
-                // Get system type and determine marker color
+                // Get system type and inverter model
                 const systemType = row[CONFIG.COLUMNS.systemType] || '';
-                const markerColor = getMarkerColor(systemType);
+                const inverterModel = row[CONFIG.COLUMNS.inverterModel] || '';
+                
+                // Determine marker color - check inverter model first, then system type
+                let markerColor;
+                if (inverterModel && (inverterModel.includes('HM10') || inverterModel.includes('HM15') || inverterModel.includes('HM20'))) {
+                    markerColor = 'purple';
+                } else {
+                    markerColor = getMarkerColor(systemType);
+                }
                 
                 // Debug: log first few system types
                 if (index < 5) {
-                    console.log(`Row ${index}: System Type = "${systemType}", Color = ${markerColor}`);
+                    console.log(`Row ${index}: System Type = "${systemType}", Inverter = "${inverterModel}", Color = ${markerColor}`);
                 }
                 
                 // Create marker
