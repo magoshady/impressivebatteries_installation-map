@@ -73,6 +73,28 @@
             color: #333;
         }
 
+        .hubspot-button {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 10px 16px;
+            background: #ff7a59;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 600;
+            font-size: 13px;
+            text-align: center;
+            transition: background 0.2s;
+        }
+
+        .hubspot-button:hover {
+            background: #ff5c39;
+        }
+
+        .hubspot-button:before {
+            content: '🔗 ';
+        }
+
         .loading {
             position: fixed;
             top: 50%;
@@ -560,6 +582,7 @@
 
         // Create info window HTML content
         function createInfoWindowContent(row, index) {
+            const recordId = row[CONFIG.COLUMNS.recordId] || '';
             const customerName = row[CONFIG.COLUMNS.customerName] || 'Unknown Customer';
             const projectAddress = row[CONFIG.COLUMNS.projectAddress] || '';
             const systemSize = row[CONFIG.COLUMNS.systemSize] || '';
@@ -602,6 +625,14 @@
                 html += `<div class="field">
                     <span class="label">📦 Battery Location:</span>
                     <span class="value">${escapeHtml(batteryLocation)}</span>
+                </div>`;
+            }
+            
+            // Add HubSpot link button if record ID exists
+            if (recordId) {
+                const hubspotUrl = `https://app-ap1.hubspot.com/contacts/441838848/record/0-3/${recordId}`;
+                html += `<div style="text-align: center; margin-top: 10px;">
+                    <a href="${hubspotUrl}" target="_blank" class="hubspot-button">View in HubSpot</a>
                 </div>`;
             }
             
