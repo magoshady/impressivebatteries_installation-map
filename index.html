@@ -222,6 +222,10 @@
             border: 2px solid #666;
         }
 
+        .legend-icon.orange {
+            background-color: #FF9800;
+        }
+
         .legend-icon.yellow {
             background-color: #FFEB3B;
         }
@@ -298,7 +302,8 @@
                 batteryLocation: 8,   // Column I - Battery Location
                 installationDate: 9,  // Column J - Installation date
                 systemType: 11,       // Column L - System Type (Solar Only, Battery Only, Solar + Battery)
-                inverterModel: 12     // Column M - Inverter Model (ESYSUNHOME HM10/15/20)
+                inverterModel: 12,    // Column M - Inverter Model (ESYSUNHOME HM10/15/20)
+                siteInspection: 13    // Column N - Site Inspection Needed (YES/NO)
             },
             
             // Default map center (will auto-adjust to show all markers)
@@ -313,12 +318,14 @@
         let map;
         let markers = [];
         let markersByType = {
+            'orange': [],
             'yellow': [],
             'green': [],
             'red': [],
             'purple': []
         };
         let systemTypeCounts = {
+            'orange': 0,
             'yellow': 0,
             'green': 0,
             'red': 0,
@@ -353,6 +360,11 @@
             legendElement.className = 'map-legend';
             legendElement.innerHTML = `
                 <h3>System Types</h3>
+                <div class="legend-item">
+                    <input type="checkbox" id="filter-orange" class="filter-checkbox" checked>
+                    <div class="legend-icon orange"></div>
+                    <span>⚠️ Site Inspection <span id="count-orange">(0)</span></span>
+                </div>
                 <div class="legend-item">
                     <input type="checkbox" id="filter-yellow" class="filter-checkbox" checked>
                     <div class="legend-icon yellow"></div>
@@ -478,11 +490,13 @@
         function updateLegendCounts() {
             if (!legendElement) return;
             
+            const orangeCount = legendElement.querySelector('#count-orange');
             const yellowCount = legendElement.querySelector('#count-yellow');
             const greenCount = legendElement.querySelector('#count-green');
             const redCount = legendElement.querySelector('#count-red');
             const purpleCount = legendElement.querySelector('#count-purple');
             
+            if (orangeCount) orangeCount.textContent = `(${systemTypeCounts.orange})`;
             if (yellowCount) yellowCount.textContent = `(${systemTypeCounts.yellow})`;
             if (greenCount) greenCount.textContent = `(${systemTypeCounts.green})`;
             if (redCount) redCount.textContent = `(${systemTypeCounts.red})`;
@@ -495,10 +509,12 @@
             let validCount = 0;
 
             // Reset counts and arrays
+            systemTypeCounts.orange = 0;
             systemTypeCounts.yellow = 0;
             systemTypeCounts.green = 0;
             systemTypeCounts.red = 0;
             systemTypeCounts.purple = 0;
+            markersByType.orange = [];
             markersByType.yellow = [];
             markersByType.green = [];
             markersByType.red = [];
@@ -516,21 +532,27 @@
 
                 const position = { lat, lng };
                 
-                // Get system type and inverter model
+                // Get all job properties
+                const siteInspection = row[CONFIG.COLUMNS.siteInspection] || '';
                 const systemType = row[CONFIG.COLUMNS.systemType] || '';
                 const inverterModel = row[CONFIG.COLUMNS.inverterModel] || '';
                 
-                // Determine marker color - check inverter model first, then system type
+                // Determine marker color - Priority: 1) Site Inspection 2) Inverter Model 3) System Type
                 let markerColor;
-                if (inverterModel && (inverterModel.includes('HM10') || inverterModel.includes('HM15') || inverterModel.includes('HM20'))) {
+                if (siteInspection && siteInspection.toUpperCase().trim() === 'YES') {
+                    // Priority 1: Site Inspection Needed
+                    markerColor = 'orange';
+                } else if (inverterModel && (inverterModel.includes('HM10') || inverterModel.includes('HM15') || inverterModel.includes('HM20'))) {
+                    // Priority 2: HM10/15/20 Inverters
                     markerColor = 'purple';
                 } else {
+                    // Priority 3: System Type (Solar Only, Solar & Battery, Battery Only)
                     markerColor = getMarkerColor(systemType);
                 }
                 
-                // Debug: log first few system types
+                // Debug: log first few jobs
                 if (index < 5) {
-                    console.log(`Row ${index}: System Type = "${systemType}", Inverter = "${inverterModel}", Color = ${markerColor}`);
+                    console.log(`Row ${index}: SiteInspection = "${siteInspection}", Inverter = "${inverterModel}", SystemType = "${systemType}", Color = ${markerColor}`);
                 }
                 
                 // Create marker
