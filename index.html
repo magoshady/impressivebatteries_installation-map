@@ -367,7 +367,7 @@
             legendElement.innerHTML = `
                 <h3>System Types</h3>
                 <div class="legend-item">
-                    <input type="checkbox" id="filter-blue" class="filter-checkbox" checked>
+                    <input type="checkbox" id="filter-blue" class="filter-checkbox">
                     <div class="legend-icon blue"></div>
                     <span>📅 Scheduled Jobs <span id="count-blue">(0)</span></span>
                 </div>
@@ -658,6 +658,11 @@
             // Update legend with counts
             console.log('Final counts:', systemTypeCounts);
             updateLegendCounts();
+
+            // Hide blue scheduled markers by default (checkbox starts unchecked)
+            markersByType.blue.forEach(marker => {
+                marker.setVisible(false);
+            });
 
             // Hide loading
             document.getElementById('loading').classList.add('hidden');
