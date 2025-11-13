@@ -392,7 +392,7 @@
                     <span>Battery Only <span id="count-red">(0)</span></span>
                 </div>
                 <div class="legend-item">
-                    <input type="checkbox" id="filter-purple" class="filter-checkbox" checked>
+                    <input type="checkbox" id="filter-purple" class="filter-checkbox">
                     <div class="legend-icon purple"></div>
                     <span>HM10/15/20 <span id="count-purple">(0)</span></span>
                 </div>
@@ -659,8 +659,11 @@
             console.log('Final counts:', systemTypeCounts);
             updateLegendCounts();
 
-            // Hide blue scheduled markers by default (checkbox starts unchecked)
+            // Hide blue and purple markers by default (checkboxes start unchecked)
             markersByType.blue.forEach(marker => {
+                marker.setVisible(false);
+            });
+            markersByType.purple.forEach(marker => {
                 marker.setVisible(false);
             });
 
