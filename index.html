@@ -222,6 +222,10 @@
             border: 2px solid #666;
         }
 
+        .legend-icon.blue {
+            background-color: #2196F3;
+        }
+
         .legend-icon.orange {
             background-color: #FF9800;
         }
@@ -318,6 +322,7 @@
         let map;
         let markers = [];
         let markersByType = {
+            'blue': [],
             'orange': [],
             'yellow': [],
             'green': [],
@@ -325,6 +330,7 @@
             'purple': []
         };
         let systemTypeCounts = {
+            'blue': 0,
             'orange': 0,
             'yellow': 0,
             'green': 0,
@@ -360,6 +366,11 @@
             legendElement.className = 'map-legend';
             legendElement.innerHTML = `
                 <h3>System Types</h3>
+                <div class="legend-item">
+                    <input type="checkbox" id="filter-blue" class="filter-checkbox" checked>
+                    <div class="legend-icon blue"></div>
+                    <span>📅 Scheduled Jobs <span id="count-blue">(0)</span></span>
+                </div>
                 <div class="legend-item">
                     <input type="checkbox" id="filter-orange" class="filter-checkbox" checked>
                     <div class="legend-icon orange"></div>
@@ -424,25 +435,48 @@
                     return;
                 }
 
-                const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEETS_ID}/values/${CONFIG.SHEET_NAME}?key=${CONFIG.GOOGLE_MAPS_API_KEY}`;
+                // Fetch both sheets
+                const unscheduledUrl = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEETS_ID}/values/${CONFIG.SHEET_NAME}?key=${CONFIG.GOOGLE_MAPS_API_KEY}`;
+                const scheduledUrl = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEETS_ID}/values/Scheduled Jobs - Not yet Installed?key=${CONFIG.GOOGLE_MAPS_API_KEY}`;
                 
-                const response = await fetch(url);
+                // Fetch unscheduled jobs
+                const unscheduledResponse = await fetch(unscheduledUrl);
+                if (!unscheduledResponse.ok) {
+                    throw new Error(`Failed to fetch unscheduled data: ${unscheduledResponse.status} ${unscheduledResponse.statusText}`);
+                }
+                const unscheduledData = await unscheduledResponse.json();
                 
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch data: ${response.status} ${response.statusText}`);
+                // Fetch scheduled jobs (may not exist, so handle gracefully)
+                let scheduledData = null;
+                try {
+                    const scheduledResponse = await fetch(scheduledUrl);
+                    if (scheduledResponse.ok) {
+                        scheduledData = await scheduledResponse.json();
+                    }
+                } catch (schedError) {
+                    console.log('Scheduled Jobs sheet not found or empty, continuing with unscheduled only');
                 }
                 
-                const data = await response.json();
+                // Process unscheduled jobs (Sheet1)
+                if (unscheduledData.values && unscheduledData.values.length > 0) {
+                    const unscheduledRows = unscheduledData.values.slice(1); // Skip header
+                    processJobData(unscheduledRows, false, false); // isScheduled=false, skipReset=false
+                }
                 
-                if (!data.values || data.values.length === 0) {
-                    showError('No data found in the spreadsheet.');
+                // Process scheduled jobs (Scheduled Jobs - Not yet Installed)
+                if (scheduledData && scheduledData.values && scheduledData.values.length > 0) {
+                    const scheduledRows = scheduledData.values.slice(1); // Skip header
+                    processJobData(scheduledRows, true, true); // isScheduled=true, skipReset=true
+                }
+                
+                if ((!unscheduledData.values || unscheduledData.values.length === 0) && 
+                    (!scheduledData || !scheduledData.values || scheduledData.values.length === 0)) {
+                    showError('No data found in any spreadsheet.');
                     return;
                 }
-
-                // Skip header row (first row)
-                const rows = data.values.slice(1);
                 
-                processJobData(rows);
+                // Finalize map after processing all data
+                finalizeMap();
                 
             } catch (error) {
                 console.error('Error loading sheet data:', error);
@@ -490,12 +524,14 @@
         function updateLegendCounts() {
             if (!legendElement) return;
             
+            const blueCount = legendElement.querySelector('#count-blue');
             const orangeCount = legendElement.querySelector('#count-orange');
             const yellowCount = legendElement.querySelector('#count-yellow');
             const greenCount = legendElement.querySelector('#count-green');
             const redCount = legendElement.querySelector('#count-red');
             const purpleCount = legendElement.querySelector('#count-purple');
             
+            if (blueCount) blueCount.textContent = `(${systemTypeCounts.blue})`;
             if (orangeCount) orangeCount.textContent = `(${systemTypeCounts.orange})`;
             if (yellowCount) yellowCount.textContent = `(${systemTypeCounts.yellow})`;
             if (greenCount) greenCount.textContent = `(${systemTypeCounts.green})`;
@@ -504,21 +540,25 @@
         }
 
         // Process job data and create markers
-        function processJobData(rows) {
+        function processJobData(rows, isScheduled = false, skipReset = false) {
             const bounds = new google.maps.LatLngBounds();
             let validCount = 0;
 
-            // Reset counts and arrays
-            systemTypeCounts.orange = 0;
-            systemTypeCounts.yellow = 0;
-            systemTypeCounts.green = 0;
-            systemTypeCounts.red = 0;
-            systemTypeCounts.purple = 0;
-            markersByType.orange = [];
-            markersByType.yellow = [];
-            markersByType.green = [];
-            markersByType.red = [];
-            markersByType.purple = [];
+            // Reset counts and arrays only on first call
+            if (!skipReset) {
+                systemTypeCounts.blue = 0;
+                systemTypeCounts.orange = 0;
+                systemTypeCounts.yellow = 0;
+                systemTypeCounts.green = 0;
+                systemTypeCounts.red = 0;
+                systemTypeCounts.purple = 0;
+                markersByType.blue = [];
+                markersByType.orange = [];
+                markersByType.yellow = [];
+                markersByType.green = [];
+                markersByType.red = [];
+                markersByType.purple = [];
+            }
 
             rows.forEach((row, index) => {
                 const lat = parseFloat(row[CONFIG.COLUMNS.latitude]);
@@ -532,27 +572,33 @@
 
                 const position = { lat, lng };
                 
-                // Get all job properties
-                const siteInspection = row[CONFIG.COLUMNS.siteInspection] || '';
-                const systemType = row[CONFIG.COLUMNS.systemType] || '';
-                const inverterModel = row[CONFIG.COLUMNS.inverterModel] || '';
-                
-                // Determine marker color - Priority: 1) Site Inspection 2) Inverter Model 3) System Type
+                // Determine marker color based on source sheet and properties
                 let markerColor;
-                if (siteInspection && siteInspection.toUpperCase().trim() === 'YES') {
-                    // Priority 1: Site Inspection Needed
-                    markerColor = 'orange';
-                } else if (inverterModel && (inverterModel.includes('HM10') || inverterModel.includes('HM15') || inverterModel.includes('HM20'))) {
-                    // Priority 2: HM10/15/20 Inverters
-                    markerColor = 'purple';
+                
+                if (isScheduled) {
+                    // Priority 0: Scheduled Jobs (from "Scheduled Jobs - Not yet Installed" sheet)
+                    markerColor = 'blue';
                 } else {
-                    // Priority 3: System Type (Solar Only, Solar & Battery, Battery Only)
-                    markerColor = getMarkerColor(systemType);
+                    // For unscheduled jobs, check other properties
+                    const siteInspection = row[CONFIG.COLUMNS.siteInspection] || '';
+                    const systemType = row[CONFIG.COLUMNS.systemType] || '';
+                    const inverterModel = row[CONFIG.COLUMNS.inverterModel] || '';
+                    
+                    if (siteInspection && siteInspection.toUpperCase().trim() === 'YES') {
+                        // Priority 1: Site Inspection Needed
+                        markerColor = 'orange';
+                    } else if (inverterModel && (inverterModel.includes('HM10') || inverterModel.includes('HM15') || inverterModel.includes('HM20'))) {
+                        // Priority 2: HM10/15/20 Inverters
+                        markerColor = 'purple';
+                    } else {
+                        // Priority 3: System Type (Solar Only, Solar & Battery, Battery Only)
+                        markerColor = getMarkerColor(systemType);
+                    }
                 }
                 
                 // Debug: log first few jobs
                 if (index < 5) {
-                    console.log(`Row ${index}: SiteInspection = "${siteInspection}", Inverter = "${inverterModel}", SystemType = "${systemType}", Color = ${markerColor}`);
+                    console.log(`Row ${index}: IsScheduled = ${isScheduled}, Color = ${markerColor}`);
                 }
                 
                 // Create marker
@@ -580,13 +626,27 @@
                 validCount++;
             });
 
-            // Update stats
-            document.getElementById('totalJobs').textContent = rows.length;
-            document.getElementById('loadedJobs').textContent = validCount;
+            return { bounds, validCount };
+        }
 
-            // Fit map to markers
-            if (validCount > 0) {
-                if (validCount === 1) {
+        // Finalize map after all data is loaded
+        function finalizeMap() {
+            // Calculate total jobs
+            const totalJobs = Object.values(systemTypeCounts).reduce((a, b) => a + b, 0);
+            const totalLoaded = markers.length;
+            
+            // Update stats
+            document.getElementById('totalJobs').textContent = totalJobs;
+            document.getElementById('loadedJobs').textContent = totalLoaded;
+
+            // Fit map to all markers
+            if (markers.length > 0) {
+                const bounds = new google.maps.LatLngBounds();
+                markers.forEach(marker => {
+                    bounds.extend(marker.getPosition());
+                });
+                
+                if (markers.length === 1) {
                     map.setCenter(markers[0].getPosition());
                     map.setZoom(15);
                 } else {
