@@ -631,11 +631,12 @@
 
         // Finalize map after all data is loaded
         function finalizeMap() {
-            // Calculate total jobs
-            const totalJobs = Object.values(systemTypeCounts).reduce((a, b) => a + b, 0);
-            const totalLoaded = markers.length;
+            // Calculate total jobs (excluding scheduled jobs in blue)
+            const totalJobs = systemTypeCounts.orange + systemTypeCounts.yellow + 
+                             systemTypeCounts.green + systemTypeCounts.red + systemTypeCounts.purple;
+            const totalLoaded = markers.length - markersByType.blue.length;
             
-            // Update stats
+            // Update stats (only unscheduled jobs)
             document.getElementById('totalJobs').textContent = totalJobs;
             document.getElementById('loadedJobs').textContent = totalLoaded;
 
