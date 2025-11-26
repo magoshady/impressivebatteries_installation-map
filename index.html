@@ -245,6 +245,10 @@
         .legend-icon.purple {
             background-color: #9C27B0;
         }
+
+        .legend-icon.cyan {
+            background-color: #00BCD4;
+        }
     </style>
 </head>
 <body>
@@ -327,7 +331,8 @@
             'yellow': [],
             'green': [],
             'red': [],
-            'purple': []
+            'purple': [],
+            'cyan': []
         };
         let systemTypeCounts = {
             'blue': 0,
@@ -335,7 +340,8 @@
             'yellow': 0,
             'green': 0,
             'red': 0,
-            'purple': 0
+            'purple': 0,
+            'cyan': 0
         };
         let infoWindow;
         let legendElement;
@@ -395,6 +401,11 @@
                     <input type="checkbox" id="filter-purple" class="filter-checkbox">
                     <div class="legend-icon purple"></div>
                     <span>HM10/15/20 <span id="count-purple">(0)</span></span>
+                </div>
+                <div class="legend-item">
+                    <input type="checkbox" id="filter-cyan" class="filter-checkbox" checked>
+                    <div class="legend-icon cyan"></div>
+                    <span>🔋 40+ kWh + HM5 <span id="count-cyan">(0)</span></span>
                 </div>
             `;
             
@@ -530,6 +541,7 @@
             const greenCount = legendElement.querySelector('#count-green');
             const redCount = legendElement.querySelector('#count-red');
             const purpleCount = legendElement.querySelector('#count-purple');
+            const cyanCount = legendElement.querySelector('#count-cyan');
             
             if (blueCount) blueCount.textContent = `(${systemTypeCounts.blue})`;
             if (orangeCount) orangeCount.textContent = `(${systemTypeCounts.orange})`;
@@ -537,6 +549,7 @@
             if (greenCount) greenCount.textContent = `(${systemTypeCounts.green})`;
             if (redCount) redCount.textContent = `(${systemTypeCounts.red})`;
             if (purpleCount) purpleCount.textContent = `(${systemTypeCounts.purple})`;
+            if (cyanCount) cyanCount.textContent = `(${systemTypeCounts.cyan})`;
         }
 
         // Process job data and create markers
@@ -552,12 +565,14 @@
                 systemTypeCounts.green = 0;
                 systemTypeCounts.red = 0;
                 systemTypeCounts.purple = 0;
+                systemTypeCounts.cyan = 0;
                 markersByType.blue = [];
                 markersByType.orange = [];
                 markersByType.yellow = [];
                 markersByType.green = [];
                 markersByType.red = [];
                 markersByType.purple = [];
+                markersByType.cyan = [];
             }
 
             rows.forEach((row, index) => {
@@ -583,15 +598,19 @@
                     const siteInspection = row[CONFIG.COLUMNS.siteInspection] || '';
                     const systemType = row[CONFIG.COLUMNS.systemType] || '';
                     const inverterModel = row[CONFIG.COLUMNS.inverterModel] || '';
+                    const batterySize = parseFloat(row[CONFIG.COLUMNS.batterySize]) || 0;
                     
                     if (siteInspection && siteInspection.toUpperCase().trim() === 'YES') {
                         // Priority 1: Site Inspection Needed
                         markerColor = 'orange';
+                    } else if (batterySize > 40 && inverterModel && inverterModel.includes('HM5')) {
+                        // Priority 2: Battery Size > 40kWh AND Inverter Model is HM5
+                        markerColor = 'cyan';
                     } else if (inverterModel && (inverterModel.includes('HM10') || inverterModel.includes('HM15') || inverterModel.includes('HM20'))) {
-                        // Priority 2: HM10/15/20 Inverters
+                        // Priority 3: HM10/15/20 Inverters
                         markerColor = 'purple';
                     } else {
-                        // Priority 3: System Type (Solar Only, Solar & Battery, Battery Only)
+                        // Priority 4: System Type (Solar Only, Solar & Battery, Battery Only)
                         markerColor = getMarkerColor(systemType);
                     }
                 }
@@ -633,7 +652,8 @@
         function finalizeMap() {
             // Calculate total jobs (excluding scheduled jobs in blue)
             const totalJobs = systemTypeCounts.orange + systemTypeCounts.yellow + 
-                             systemTypeCounts.green + systemTypeCounts.red + systemTypeCounts.purple;
+                             systemTypeCounts.green + systemTypeCounts.red + 
+                             systemTypeCounts.purple + systemTypeCounts.cyan;
             const totalLoaded = markers.length - markersByType.blue.length;
             
             // Update stats (only unscheduled jobs)
