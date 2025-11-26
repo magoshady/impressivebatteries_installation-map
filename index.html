@@ -405,7 +405,7 @@
                 <div class="legend-item">
                     <input type="checkbox" id="filter-cyan" class="filter-checkbox" checked>
                     <div class="legend-icon cyan"></div>
-                    <span>🔋 40+ kWh + HM5 <span id="count-cyan">(0)</span></span>
+                    <span>2xHM5 <span id="count-cyan">(0)</span></span>
                 </div>
             `;
             
@@ -516,7 +516,9 @@
         // Get marker icon URL based on color
         function getMarkerIcon(color) {
             // Use Google's chart API for colored markers
-            return `http://maps.google.com/mapfiles/ms/icons/${color}-dot.png`;
+            // Map cyan to lightblue since Google doesn't have cyan
+            const iconColor = color === 'cyan' ? 'ltblue' : color;
+            return `http://maps.google.com/mapfiles/ms/icons/${iconColor}-dot.png`;
         }
 
         // Toggle markers visibility by type
