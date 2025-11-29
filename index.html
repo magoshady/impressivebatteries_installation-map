@@ -263,8 +263,8 @@
             <span class="stats-number" id="totalJobs">0</span>
         </div>
         <div class="stats-item">
-            <span>Loaded:</span>
-            <span class="stats-number" id="loadedJobs">0</span>
+            <span>Total Selected:</span>
+            <span class="stats-number" id="selectedJobs">0</span>
         </div>
     </div>
 
@@ -531,6 +531,25 @@
             if (!show) {
                 infoWindow.close();
             }
+            
+            // Update selected count
+            updateSelectedCount();
+        }
+        
+        // Update the selected jobs count based on checked filters
+        function updateSelectedCount() {
+            let selectedTotal = 0;
+            
+            // Check each checkbox and add count if checked
+            const checkboxes = ['orange', 'yellow', 'green', 'red', 'purple', 'cyan'];
+            checkboxes.forEach(color => {
+                const checkbox = document.getElementById(`filter-${color}`);
+                if (checkbox && checkbox.checked) {
+                    selectedTotal += systemTypeCounts[color];
+                }
+            });
+            
+            document.getElementById('selectedJobs').textContent = selectedTotal;
         }
 
         // Update legend counts
@@ -656,11 +675,9 @@
             const totalJobs = systemTypeCounts.orange + systemTypeCounts.yellow + 
                              systemTypeCounts.green + systemTypeCounts.red + 
                              systemTypeCounts.purple + systemTypeCounts.cyan;
-            const totalLoaded = markers.length - markersByType.blue.length;
             
             // Update stats (only unscheduled jobs)
             document.getElementById('totalJobs').textContent = totalJobs;
-            document.getElementById('loadedJobs').textContent = totalLoaded;
 
             // Fit map to all markers
             if (markers.length > 0) {
@@ -688,6 +705,9 @@
             markersByType.purple.forEach(marker => {
                 marker.setVisible(false);
             });
+
+            // Update selected count based on checked filters
+            updateSelectedCount();
 
             // Hide loading
             document.getElementById('loading').classList.add('hidden');
