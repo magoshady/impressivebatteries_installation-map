@@ -311,7 +311,8 @@
                 installationDate: 9,  // Column J - Installation date
                 systemType: 11,       // Column L - System Type (Solar Only, Battery Only, Solar + Battery)
                 inverterModel: 12,    // Column M - Inverter Model (ESYSUNHOME HM10/15/20)
-                siteInspection: 13    // Column N - Site Inspection Needed (YES/NO)
+                siteInspection: 13,   // Column N - Site Inspection Needed (YES/NO)
+                contractDate: 14      // Column O - Contract Date
             },
             
             // Default map center (will auto-adjust to show all markers)
@@ -345,6 +346,7 @@
         };
         let infoWindow;
         let legendElement;
+        let jobsWithDates = []; // Track jobs with contract dates for oldest identification
 
         // Initialize the map
         function initMap() {
@@ -514,11 +516,23 @@
         }
 
         // Get marker icon URL based on color
-        function getMarkerIcon(color) {
+        function getMarkerIcon(color, isOldest = false) {
             // Use Google's chart API for colored markers
             // Map cyan to lightblue since Google doesn't have cyan
             const iconColor = color === 'cyan' ? 'ltblue' : color;
-            return `http://maps.google.com/mapfiles/ms/icons/${iconColor}-dot.png`;
+            const iconUrl = `http://maps.google.com/mapfiles/ms/icons/${iconColor}-dot.png`;
+            
+            // If this is one of the oldest jobs, make it larger
+            if (isOldest) {
+                return {
+                    url: iconUrl,
+                    scaledSize: new google.maps.Size(50, 50), // Larger size
+                    origin: new google.maps.Point(0, 0),
+                    anchor: new google.maps.Point(25, 50) // Adjust anchor for larger size
+                };
+            }
+            
+            return iconUrl;
         }
 
         // Toggle markers visibility by type
@@ -594,6 +608,7 @@
                 markersByType.red = [];
                 markersByType.purple = [];
                 markersByType.cyan = [];
+                jobsWithDates = []; // Reset jobs with dates tracking
             }
 
             rows.forEach((row, index) => {
@@ -664,6 +679,19 @@
                 systemTypeCounts[markerColor]++;
                 bounds.extend(position);
                 validCount++;
+                
+                // Track jobs with contract dates for oldest identification (only yellow/green/red)
+                if ((markerColor === 'yellow' || markerColor === 'green' || markerColor === 'red') && 
+                    row[CONFIG.COLUMNS.contractDate]) {
+                    const contractDate = new Date(row[CONFIG.COLUMNS.contractDate]);
+                    if (!isNaN(contractDate.getTime())) {
+                        jobsWithDates.push({
+                            marker: marker,
+                            contractDate: contractDate,
+                            color: markerColor
+                        });
+                    }
+                }
             });
 
             return { bounds, validCount };
@@ -697,6 +725,25 @@
             // Update legend with counts
             console.log('Final counts:', systemTypeCounts);
             updateLegendCounts();
+
+            // Identify and highlight the 5 oldest jobs (yellow/green/red only)
+            if (jobsWithDates.length > 0) {
+                // Sort by contract date (oldest first)
+                jobsWithDates.sort((a, b) => a.contractDate - b.contractDate);
+                
+                // Take the oldest 5
+                const oldestJobs = jobsWithDates.slice(0, 5);
+                
+                // Update their markers to be larger
+                oldestJobs.forEach(job => {
+                    job.marker.setIcon(getMarkerIcon(job.color, true)); // Pass true for isOldest
+                });
+                
+                console.log('Highlighted 5 oldest jobs:', oldestJobs.map(j => ({
+                    date: j.contractDate.toISOString().split('T')[0],
+                    color: j.color
+                })));
+            }
 
             // Hide blue and purple markers by default (checkboxes start unchecked)
             markersByType.blue.forEach(marker => {
