@@ -246,6 +246,10 @@
             background-color: #9C27B0;
         }
 
+        .legend-icon.pink {
+            background-color: #E91E63;
+        }
+
         .legend-icon.cyan {
             background-color: #00BCD4;
         }
@@ -333,6 +337,7 @@
             'green': [],
             'red': [],
             'purple': [],
+            'pink': [],
             'cyan': []
         };
         let systemTypeCounts = {
@@ -342,6 +347,7 @@
             'green': 0,
             'red': 0,
             'purple': 0,
+            'pink': 0,
             'cyan': 0
         };
         let infoWindow;
@@ -402,7 +408,12 @@
                 <div class="legend-item">
                     <input type="checkbox" id="filter-purple" class="filter-checkbox">
                     <div class="legend-icon purple"></div>
-                    <span>HM10/15/20 <span id="count-purple">(0)</span></span>
+                    <span>HM10 <span id="count-purple">(0)</span></span>
+                </div>
+                <div class="legend-item">
+                    <input type="checkbox" id="filter-pink" class="filter-checkbox">
+                    <div class="legend-icon pink"></div>
+                    <span>HM15/20 <span id="count-pink">(0)</span></span>
                 </div>
                 <div class="legend-item">
                     <input type="checkbox" id="filter-cyan" class="filter-checkbox" checked>
@@ -518,8 +529,11 @@
         // Get marker icon URL based on color
         function getMarkerIcon(color, isOldest = false) {
             // Use Google's chart API for colored markers
-            // Map cyan to lightblue since Google doesn't have cyan
-            const iconColor = color === 'cyan' ? 'ltblue' : color;
+            // Map colors to Google Maps icon names
+            let iconColor = color;
+            if (color === 'cyan') iconColor = 'ltblue';
+            if (color === 'pink') iconColor = 'pink';
+            
             const iconUrl = `http://maps.google.com/mapfiles/ms/icons/${iconColor}-dot.png`;
             
             // If this is one of the oldest jobs, make it larger
@@ -555,7 +569,7 @@
             let selectedTotal = 0;
             
             // Check each checkbox and add count if checked
-            const checkboxes = ['orange', 'yellow', 'green', 'red', 'purple', 'cyan'];
+            const checkboxes = ['orange', 'yellow', 'green', 'red', 'purple', 'pink', 'cyan'];
             checkboxes.forEach(color => {
                 const checkbox = document.getElementById(`filter-${color}`);
                 if (checkbox && checkbox.checked) {
@@ -576,6 +590,7 @@
             const greenCount = legendElement.querySelector('#count-green');
             const redCount = legendElement.querySelector('#count-red');
             const purpleCount = legendElement.querySelector('#count-purple');
+            const pinkCount = legendElement.querySelector('#count-pink');
             const cyanCount = legendElement.querySelector('#count-cyan');
             
             if (blueCount) blueCount.textContent = `(${systemTypeCounts.blue})`;
@@ -584,6 +599,7 @@
             if (greenCount) greenCount.textContent = `(${systemTypeCounts.green})`;
             if (redCount) redCount.textContent = `(${systemTypeCounts.red})`;
             if (purpleCount) purpleCount.textContent = `(${systemTypeCounts.purple})`;
+            if (pinkCount) pinkCount.textContent = `(${systemTypeCounts.pink})`;
             if (cyanCount) cyanCount.textContent = `(${systemTypeCounts.cyan})`;
         }
 
@@ -600,6 +616,7 @@
                 systemTypeCounts.green = 0;
                 systemTypeCounts.red = 0;
                 systemTypeCounts.purple = 0;
+                systemTypeCounts.pink = 0;
                 systemTypeCounts.cyan = 0;
                 markersByType.blue = [];
                 markersByType.orange = [];
@@ -607,6 +624,7 @@
                 markersByType.green = [];
                 markersByType.red = [];
                 markersByType.purple = [];
+                markersByType.pink = [];
                 markersByType.cyan = [];
                 jobsWithDates = []; // Reset jobs with dates tracking
             }
@@ -642,11 +660,14 @@
                     } else if (batterySize > 40 && inverterModel && inverterModel.includes('HM5')) {
                         // Priority 2: Battery Size > 40kWh AND Inverter Model is HM5
                         markerColor = 'cyan';
-                    } else if (inverterModel && (inverterModel.includes('HM10') || inverterModel.includes('HM15') || inverterModel.includes('HM20'))) {
-                        // Priority 3: HM10/15/20 Inverters
+                    } else if (inverterModel && inverterModel.includes('HM10')) {
+                        // Priority 3: HM10 Inverters (ESYSUNHOME HM10, ESYSUNHOME HM10 Single Phase)
                         markerColor = 'purple';
+                    } else if (inverterModel && (inverterModel.includes('HM15') || inverterModel.includes('HM20'))) {
+                        // Priority 4: HM15/20 Inverters
+                        markerColor = 'pink';
                     } else {
-                        // Priority 4: System Type (Solar Only, Solar & Battery, Battery Only)
+                        // Priority 5: System Type (Solar Only, Solar & Battery, Battery Only)
                         markerColor = getMarkerColor(systemType);
                     }
                 }
@@ -702,7 +723,7 @@
             // Calculate total jobs (excluding scheduled jobs in blue)
             const totalJobs = systemTypeCounts.orange + systemTypeCounts.yellow + 
                              systemTypeCounts.green + systemTypeCounts.red + 
-                             systemTypeCounts.purple + systemTypeCounts.cyan;
+                             systemTypeCounts.purple + systemTypeCounts.pink + systemTypeCounts.cyan;
             
             // Update stats (only unscheduled jobs)
             document.getElementById('totalJobs').textContent = totalJobs;
@@ -745,11 +766,14 @@
                 })));
             }
 
-            // Hide blue and purple markers by default (checkboxes start unchecked)
+            // Hide blue, purple, and pink markers by default (checkboxes start unchecked)
             markersByType.blue.forEach(marker => {
                 marker.setVisible(false);
             });
             markersByType.purple.forEach(marker => {
+                marker.setVisible(false);
+            });
+            markersByType.pink.forEach(marker => {
                 marker.setVisible(false);
             });
 
