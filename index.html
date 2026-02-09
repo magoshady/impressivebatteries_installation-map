@@ -863,7 +863,45 @@
             // Update stats (only unscheduled jobs)
             document.getElementById('totalJobs').textContent = totalJobs;
 
-            // Fit map to visible markers only
+            // Update legend with counts
+            console.log('Final counts:', systemTypeCounts);
+            updateLegendCounts();
+
+            // Identify and highlight the 5 oldest jobs (yellow/green/red only)
+            if (jobsWithDates.length > 0) {
+                // Sort by contract date (oldest first)
+                jobsWithDates.sort((a, b) => a.contractDate - b.contractDate);
+                
+                // Take the oldest 5
+                const oldestJobs = jobsWithDates.slice(0, 5);
+                
+                // Update their markers to be larger
+                oldestJobs.forEach(job => {
+                    job.marker.setIcon(getMarkerIcon(job.color, true)); // Pass true for isOldest
+                });
+                
+                console.log('Highlighted 5 oldest jobs:', oldestJobs.map(j => ({
+                    date: j.contractDate.toISOString().split('T')[0],
+                    color: j.color
+                })));
+            }
+
+            // Hide blue, purple, pink, and lightgreen (LEADS) markers by default (checkboxes start unchecked)
+            // MUST be done BEFORE fitting bounds
+            markersByType.blue.forEach(marker => {
+                marker.setVisible(false);
+            });
+            markersByType.purple.forEach(marker => {
+                marker.setVisible(false);
+            });
+            markersByType.pink.forEach(marker => {
+                marker.setVisible(false);
+            });
+            markersByType.lightgreen.forEach(marker => {
+                marker.setVisible(false);
+            });
+
+            // Fit map to visible markers only (after hiding default-hidden markers)
             const visibleMarkers = markers.filter(marker => marker.getVisible());
             
             if (visibleMarkers.length > 0) {
@@ -891,43 +929,6 @@
                 map.setCenter(CONFIG.DEFAULT_CENTER);
                 map.setZoom(10);
             }
-
-            // Update legend with counts
-            console.log('Final counts:', systemTypeCounts);
-            updateLegendCounts();
-
-            // Identify and highlight the 5 oldest jobs (yellow/green/red only)
-            if (jobsWithDates.length > 0) {
-                // Sort by contract date (oldest first)
-                jobsWithDates.sort((a, b) => a.contractDate - b.contractDate);
-                
-                // Take the oldest 5
-                const oldestJobs = jobsWithDates.slice(0, 5);
-                
-                // Update their markers to be larger
-                oldestJobs.forEach(job => {
-                    job.marker.setIcon(getMarkerIcon(job.color, true)); // Pass true for isOldest
-                });
-                
-                console.log('Highlighted 5 oldest jobs:', oldestJobs.map(j => ({
-                    date: j.contractDate.toISOString().split('T')[0],
-                    color: j.color
-                })));
-            }
-
-            // Hide blue, purple, pink, and lightgreen (LEADS) markers by default (checkboxes start unchecked)
-            markersByType.blue.forEach(marker => {
-                marker.setVisible(false);
-            });
-            markersByType.purple.forEach(marker => {
-                marker.setVisible(false);
-            });
-            markersByType.pink.forEach(marker => {
-                marker.setVisible(false);
-            });
-            markersByType.lightgreen.forEach(marker => {
-                marker.setVisible(false);
-            });
 
             // Update selected count based on checked filters
             updateSelectedCount();
