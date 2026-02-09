@@ -858,13 +858,15 @@
                     }
                 }
                 
+                // Create marker title (must be before debug log)
+                const markerTitle = isLeads ? (row[1] || `Lead ${index + 1}`) : (row[CONFIG.COLUMNS.customerName] || `Job ${index + 1}`);
+                
                 // Debug: log first few jobs
                 if (index < 5 || (isLeads && index < 3)) {
                     console.log(`Row ${index}: IsLeads = ${isLeads}, IsScheduled = ${isScheduled}, Color = ${markerColor}, Lat = ${lat}, Lng = ${lng}, Title = ${markerTitle}`);
                 }
                 
                 // Create marker
-                const markerTitle = isLeads ? (row[1] || `Lead ${index + 1}`) : (row[CONFIG.COLUMNS.customerName] || `Job ${index + 1}`);
                 const marker = new google.maps.Marker({
                     position: position,
                     map: map,
