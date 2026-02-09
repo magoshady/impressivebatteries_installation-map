@@ -617,6 +617,13 @@
                 if (leadsData && leadsData.values && leadsData.values.length > 0) {
                     const leadsRows = leadsData.values.slice(1); // Skip header
                     console.log(`Loading LEADS sheet with ${leadsRows.length} rows`);
+                    console.log('First LEADS row:', leadsRows[0]);
+                    console.log('LEADS lat/lng from first row:', {
+                        lat: leadsRows[0][CONFIG.COLUMNS.latitude],
+                        lng: leadsRows[0][CONFIG.COLUMNS.longitude],
+                        recordId: leadsRows[0][CONFIG.COLUMNS.recordId],
+                        customerName: leadsRows[0][CONFIG.COLUMNS.customerName]
+                    });
                     processJobData(leadsRows, false, true, true); // isScheduled=false, isLeads=true, skipReset=true
                     console.log(`Created ${markersByType.lightgreen.length} LEADS markers`);
                 }
