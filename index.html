@@ -616,7 +616,9 @@
                 // Process LEADS
                 if (leadsData && leadsData.values && leadsData.values.length > 0) {
                     const leadsRows = leadsData.values.slice(1); // Skip header
+                    console.log(`Loading LEADS sheet with ${leadsRows.length} rows`);
                     processJobData(leadsRows, false, true, true); // isScheduled=false, isLeads=true, skipReset=true
+                    console.log(`Created ${markersByType.lightgreen.length} LEADS markers`);
                 }
                 
                 if ((!unscheduledData.values || unscheduledData.values.length === 0) && 
@@ -679,6 +681,8 @@
 
         // Toggle markers visibility by type
         function toggleMarkersByType(color, show) {
+            console.log(`Toggling ${color} markers to ${show ? 'visible' : 'hidden'}, count: ${markersByType[color].length}`);
+            
             markersByType[color].forEach(marker => {
                 marker.setVisible(show);
             });
@@ -686,6 +690,36 @@
             // Close info window if currently open marker is being hidden
             if (!show) {
                 infoWindow.close();
+            }
+            
+            // If showing markers, re-fit map to visible markers
+            if (show) {
+                setTimeout(() => {
+                    const visibleMarkers = markers.filter(marker => marker.getVisible());
+                    console.log(`Re-fitting map to ${visibleMarkers.length} visible markers`);
+                    
+                    if (visibleMarkers.length > 0) {
+                        const bounds = new google.maps.LatLngBounds();
+                        visibleMarkers.forEach(marker => {
+                            bounds.extend(marker.getPosition());
+                        });
+                        
+                        if (visibleMarkers.length === 1) {
+                            map.setCenter(visibleMarkers[0].getPosition());
+                            map.setZoom(15);
+                        } else {
+                            map.fitBounds(bounds);
+                            
+                            // Ensure minimum zoom level
+                            google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
+                                const currentZoom = map.getZoom();
+                                if (currentZoom < 8) {
+                                    map.setZoom(8);
+                                }
+                            });
+                        }
+                    }
+                }, 100); // Small delay to ensure visibility is set
             }
             
             // Update selected count
@@ -808,8 +842,8 @@
                 }
                 
                 // Debug: log first few jobs
-                if (index < 5) {
-                    console.log(`Row ${index}: IsLeads = ${isLeads}, IsScheduled = ${isScheduled}, Color = ${markerColor}`);
+                if (index < 5 || (isLeads && index < 3)) {
+                    console.log(`Row ${index}: IsLeads = ${isLeads}, IsScheduled = ${isScheduled}, Color = ${markerColor}, Lat = ${lat}, Lng = ${lng}`);
                 }
                 
                 // Create marker
