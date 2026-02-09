@@ -328,6 +328,10 @@
         .legend-icon.cyan {
             background-color: #00BCD4;
         }
+
+        .legend-icon.lightgreen {
+            background-color: #8BC34A;
+        }
     </style>
 </head>
 <body>
@@ -413,7 +417,8 @@
             'red': [],
             'purple': [],
             'pink': [],
-            'cyan': []
+            'cyan': [],
+            'lightgreen': []
         };
         let systemTypeCounts = {
             'blue': 0,
@@ -423,7 +428,8 @@
             'red': 0,
             'purple': 0,
             'pink': 0,
-            'cyan': 0
+            'cyan': 0,
+            'lightgreen': 0
         };
         let infoWindow;
         let legendElement;
@@ -495,6 +501,12 @@
                     <div class="legend-icon cyan"></div>
                     <span>2xHM5 <span id="count-cyan">(0)</span></span>
                 </div>
+                <hr style="margin: 8px 0; border: 0; border-top: 1px solid #ddd;">
+                <div class="legend-item">
+                    <input type="checkbox" id="filter-lightgreen" class="filter-checkbox">
+                    <div class="legend-icon lightgreen"></div>
+                    <span>💡 LEADS <span id="count-lightgreen">(0)</span></span>
+                </div>
             `;
             
             // Add filter event listeners
@@ -502,6 +514,26 @@
                 checkbox.addEventListener('change', (e) => {
                     e.stopPropagation(); // Prevent closing info window
                     const color = checkbox.id.replace('filter-', '');
+                    
+                    // Special handling for LEADS checkbox
+                    if (color === 'lightgreen' && checkbox.checked) {
+                        // When LEADS is checked, uncheck and hide all others
+                        ['blue', 'orange', 'yellow', 'green', 'red', 'purple', 'pink', 'cyan'].forEach(otherColor => {
+                            const otherCheckbox = legendElement.querySelector(`#filter-${otherColor}`);
+                            if (otherCheckbox) {
+                                otherCheckbox.checked = false;
+                                markersByType[otherColor].forEach(marker => marker.setVisible(false));
+                            }
+                        });
+                    } else if (color !== 'lightgreen' && checkbox.checked) {
+                        // When any other checkbox is checked, uncheck LEADS
+                        const leadsCheckbox = legendElement.querySelector('#filter-lightgreen');
+                        if (leadsCheckbox && leadsCheckbox.checked) {
+                            leadsCheckbox.checked = false;
+                            markersByType.lightgreen.forEach(marker => marker.setVisible(false));
+                        }
+                    }
+                    
                     toggleMarkersByType(color, checkbox.checked);
                 });
             });
@@ -534,9 +566,10 @@
                     return;
                 }
 
-                // Fetch both sheets
+                // Fetch all sheets
                 const unscheduledUrl = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEETS_ID}/values/${CONFIG.SHEET_NAME}?key=${CONFIG.GOOGLE_MAPS_API_KEY}`;
                 const scheduledUrl = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEETS_ID}/values/Scheduled Jobs - Not yet Installed?key=${CONFIG.GOOGLE_MAPS_API_KEY}`;
+                const leadsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEETS_ID}/values/LEADS?key=${CONFIG.GOOGLE_MAPS_API_KEY}`;
                 
                 // Fetch unscheduled jobs
                 const unscheduledResponse = await fetch(unscheduledUrl);
@@ -553,23 +586,41 @@
                         scheduledData = await scheduledResponse.json();
                     }
                 } catch (schedError) {
-                    console.log('Scheduled Jobs sheet not found or empty, continuing with unscheduled only');
+                    console.log('Scheduled Jobs sheet not found or empty, continuing without it');
+                }
+                
+                // Fetch LEADS (may not exist, so handle gracefully)
+                let leadsData = null;
+                try {
+                    const leadsResponse = await fetch(leadsUrl);
+                    if (leadsResponse.ok) {
+                        leadsData = await leadsResponse.json();
+                    }
+                } catch (leadsError) {
+                    console.log('LEADS sheet not found or empty, continuing without it');
                 }
                 
                 // Process unscheduled jobs (Sheet1)
                 if (unscheduledData.values && unscheduledData.values.length > 0) {
                     const unscheduledRows = unscheduledData.values.slice(1); // Skip header
-                    processJobData(unscheduledRows, false, false); // isScheduled=false, skipReset=false
+                    processJobData(unscheduledRows, false, false, false); // isScheduled=false, isLeads=false, skipReset=false
                 }
                 
                 // Process scheduled jobs (Scheduled Jobs - Not yet Installed)
                 if (scheduledData && scheduledData.values && scheduledData.values.length > 0) {
                     const scheduledRows = scheduledData.values.slice(1); // Skip header
-                    processJobData(scheduledRows, true, true); // isScheduled=true, skipReset=true
+                    processJobData(scheduledRows, true, false, true); // isScheduled=true, isLeads=false, skipReset=true
+                }
+                
+                // Process LEADS
+                if (leadsData && leadsData.values && leadsData.values.length > 0) {
+                    const leadsRows = leadsData.values.slice(1); // Skip header
+                    processJobData(leadsRows, false, true, true); // isScheduled=false, isLeads=true, skipReset=true
                 }
                 
                 if ((!unscheduledData.values || unscheduledData.values.length === 0) && 
-                    (!scheduledData || !scheduledData.values || scheduledData.values.length === 0)) {
+                    (!scheduledData || !scheduledData.values || scheduledData.values.length === 0) &&
+                    (!leadsData || !leadsData.values || leadsData.values.length === 0)) {
                     showError('No data found in any spreadsheet.');
                     return;
                 }
@@ -608,6 +659,7 @@
             let iconColor = color;
             if (color === 'cyan') iconColor = 'ltblue';
             if (color === 'pink') iconColor = 'pink';
+            if (color === 'lightgreen') iconColor = 'green'; // Use green for light green
             
             const iconUrl = `http://maps.google.com/mapfiles/ms/icons/${iconColor}-dot.png`;
             
@@ -643,7 +695,7 @@
         function updateSelectedCount() {
             let selectedTotal = 0;
             
-            // Check each checkbox and add count if checked
+            // Check each checkbox and add count if checked (excluding lightgreen/LEADS)
             const checkboxes = ['orange', 'yellow', 'green', 'red', 'purple', 'pink', 'cyan'];
             checkboxes.forEach(color => {
                 const checkbox = document.getElementById(`filter-${color}`);
@@ -667,6 +719,7 @@
             const purpleCount = legendElement.querySelector('#count-purple');
             const pinkCount = legendElement.querySelector('#count-pink');
             const cyanCount = legendElement.querySelector('#count-cyan');
+            const lightgreenCount = legendElement.querySelector('#count-lightgreen');
             
             if (blueCount) blueCount.textContent = `(${systemTypeCounts.blue})`;
             if (orangeCount) orangeCount.textContent = `(${systemTypeCounts.orange})`;
@@ -676,10 +729,11 @@
             if (purpleCount) purpleCount.textContent = `(${systemTypeCounts.purple})`;
             if (pinkCount) pinkCount.textContent = `(${systemTypeCounts.pink})`;
             if (cyanCount) cyanCount.textContent = `(${systemTypeCounts.cyan})`;
+            if (lightgreenCount) lightgreenCount.textContent = `(${systemTypeCounts.lightgreen})`;
         }
 
         // Process job data and create markers
-        function processJobData(rows, isScheduled = false, skipReset = false) {
+        function processJobData(rows, isScheduled = false, isLeads = false, skipReset = false) {
             const bounds = new google.maps.LatLngBounds();
             let validCount = 0;
 
@@ -693,6 +747,7 @@
                 systemTypeCounts.purple = 0;
                 systemTypeCounts.pink = 0;
                 systemTypeCounts.cyan = 0;
+                systemTypeCounts.lightgreen = 0;
                 markersByType.blue = [];
                 markersByType.orange = [];
                 markersByType.yellow = [];
@@ -701,6 +756,7 @@
                 markersByType.purple = [];
                 markersByType.pink = [];
                 markersByType.cyan = [];
+                markersByType.lightgreen = [];
                 jobsWithDates = []; // Reset jobs with dates tracking
             }
 
@@ -719,8 +775,11 @@
                 // Determine marker color based on source sheet and properties
                 let markerColor;
                 
-                if (isScheduled) {
-                    // Priority 0: Scheduled Jobs (from "Scheduled Jobs - Not yet Installed" sheet)
+                if (isLeads) {
+                    // Priority 0: LEADS (from "LEADS" sheet)
+                    markerColor = 'lightgreen';
+                } else if (isScheduled) {
+                    // Priority 1: Scheduled Jobs (from "Scheduled Jobs - Not yet Installed" sheet)
                     markerColor = 'blue';
                 } else {
                     // For unscheduled jobs, check other properties
@@ -730,26 +789,26 @@
                     const batterySize = parseFloat(row[CONFIG.COLUMNS.batterySize]) || 0;
                     
                     if (siteInspection && siteInspection.toUpperCase().trim() === 'YES') {
-                        // Priority 1: Site Inspection Needed
+                        // Priority 2: Site Inspection Needed
                         markerColor = 'orange';
                     } else if (batterySize > 40 && inverterModel && inverterModel.includes('HM5')) {
-                        // Priority 2: Battery Size > 40kWh AND Inverter Model is HM5
+                        // Priority 3: Battery Size > 40kWh AND Inverter Model is HM5
                         markerColor = 'cyan';
                     } else if (inverterModel && inverterModel.includes('HM10')) {
-                        // Priority 3: HM10 Inverters (ESYSUNHOME HM10, ESYSUNHOME HM10 Single Phase)
+                        // Priority 4: HM10 Inverters (ESYSUNHOME HM10, ESYSUNHOME HM10 Single Phase)
                         markerColor = 'purple';
                     } else if (inverterModel && (inverterModel.includes('HM15') || inverterModel.includes('HM20'))) {
-                        // Priority 4: HM15/20 Inverters
+                        // Priority 5: HM15/20 Inverters
                         markerColor = 'pink';
                     } else {
-                        // Priority 5: System Type (Solar Only, Solar & Battery, Battery Only)
+                        // Priority 6: System Type (Solar Only, Solar & Battery, Battery Only)
                         markerColor = getMarkerColor(systemType);
                     }
                 }
                 
                 // Debug: log first few jobs
                 if (index < 5) {
-                    console.log(`Row ${index}: IsScheduled = ${isScheduled}, Color = ${markerColor}`);
+                    console.log(`Row ${index}: IsLeads = ${isLeads}, IsScheduled = ${isScheduled}, Color = ${markerColor}`);
                 }
                 
                 // Create marker
@@ -841,7 +900,7 @@
                 })));
             }
 
-            // Hide blue, purple, and pink markers by default (checkboxes start unchecked)
+            // Hide blue, purple, pink, and lightgreen (LEADS) markers by default (checkboxes start unchecked)
             markersByType.blue.forEach(marker => {
                 marker.setVisible(false);
             });
@@ -849,6 +908,9 @@
                 marker.setVisible(false);
             });
             markersByType.pink.forEach(marker => {
+                marker.setVisible(false);
+            });
+            markersByType.lightgreen.forEach(marker => {
                 marker.setVisible(false);
             });
 
