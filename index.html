@@ -330,7 +330,7 @@
         }
 
         .legend-icon.lightgreen {
-            background-color: #8BC34A;
+            background-color: #FFEB3B; /* Yellow - same as marker color */
         }
     </style>
 </head>
@@ -660,7 +660,7 @@
             let iconColor = color;
             if (color === 'cyan') iconColor = 'ltblue';
             if (color === 'pink') iconColor = 'pink';
-            if (color === 'lightgreen') iconColor = 'green'; // Use green for light green
+            if (color === 'lightgreen') iconColor = 'yellow'; // Use yellow for LEADS (works well since LEADS is exclusive)
             
             const iconUrl = `http://maps.google.com/mapfiles/ms/icons/${iconColor}-dot.png`;
             
