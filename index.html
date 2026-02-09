@@ -803,12 +803,22 @@
             }
 
             rows.forEach((row, index) => {
-                const lat = parseFloat(row[CONFIG.COLUMNS.latitude]);
-                const lng = parseFloat(row[CONFIG.COLUMNS.longitude]);
+                // LEADS has different column structure: A=RecordID, B=Address, C=Lat, D=Lng
+                // Other sheets: A=RecordID, B=CustomerName, C=Address, D=Lat, E=Lng
+                let lat, lng;
+                if (isLeads) {
+                    lat = parseFloat(row[2]); // Column C
+                    lng = parseFloat(row[3]); // Column D
+                } else {
+                    lat = parseFloat(row[CONFIG.COLUMNS.latitude]); // Column D
+                    lng = parseFloat(row[CONFIG.COLUMNS.longitude]); // Column E
+                }
 
                 // Validate coordinates
                 if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
-                    console.warn(`Skipping row ${index + 2}: Invalid coordinates`, row);
+                    if (isLeads && index < 3) {
+                        console.warn(`Skipping LEADS row ${index + 2}: Invalid coordinates. Lat=${row[2]}, Lng=${row[3]}`, row);
+                    }
                     return;
                 }
 
@@ -850,20 +860,21 @@
                 
                 // Debug: log first few jobs
                 if (index < 5 || (isLeads && index < 3)) {
-                    console.log(`Row ${index}: IsLeads = ${isLeads}, IsScheduled = ${isScheduled}, Color = ${markerColor}, Lat = ${lat}, Lng = ${lng}`);
+                    console.log(`Row ${index}: IsLeads = ${isLeads}, IsScheduled = ${isScheduled}, Color = ${markerColor}, Lat = ${lat}, Lng = ${lng}, Title = ${markerTitle}`);
                 }
                 
                 // Create marker
+                const markerTitle = isLeads ? (row[1] || `Lead ${index + 1}`) : (row[CONFIG.COLUMNS.customerName] || `Job ${index + 1}`);
                 const marker = new google.maps.Marker({
                     position: position,
                     map: map,
-                    title: row[CONFIG.COLUMNS.customerName] || `Job ${index + 1}`,
+                    title: markerTitle,
                     animation: google.maps.Animation.DROP,
                     icon: getMarkerIcon(markerColor)
                 });
 
                 // Create info window content
-                const content = createInfoWindowContent(row, index);
+                const content = createInfoWindowContent(row, index, isLeads);
 
                 // Add click listener
                 marker.addListener('click', () => {
@@ -979,14 +990,28 @@
         }
 
         // Create info window HTML content
-        function createInfoWindowContent(row, index) {
-            const recordId = row[CONFIG.COLUMNS.recordId] || '';
-            const customerName = row[CONFIG.COLUMNS.customerName] || 'Unknown Customer';
-            const projectAddress = row[CONFIG.COLUMNS.projectAddress] || '';
-            const systemSize = row[CONFIG.COLUMNS.systemSize] || '';
-            const batterySize = row[CONFIG.COLUMNS.batterySize] || '';
-            const phases = row[CONFIG.COLUMNS.phases] || '';
-            const batteryLocation = row[CONFIG.COLUMNS.batteryLocation] || '';
+        function createInfoWindowContent(row, index, isLeads = false) {
+            let recordId, customerName, projectAddress, systemSize, batterySize, phases, batteryLocation;
+            
+            if (isLeads) {
+                // LEADS columns: A=RecordID, B=Address, C=Lat, D=Lng
+                recordId = row[0] || '';
+                customerName = 'Lead'; // LEADS don't have customer names yet
+                projectAddress = row[1] || '';
+                systemSize = '';
+                batterySize = '';
+                phases = '';
+                batteryLocation = '';
+            } else {
+                // Standard columns
+                recordId = row[CONFIG.COLUMNS.recordId] || '';
+                customerName = row[CONFIG.COLUMNS.customerName] || 'Unknown Customer';
+                projectAddress = row[CONFIG.COLUMNS.projectAddress] || '';
+                systemSize = row[CONFIG.COLUMNS.systemSize] || '';
+                batterySize = row[CONFIG.COLUMNS.batterySize] || '';
+                phases = row[CONFIG.COLUMNS.phases] || '';
+                batteryLocation = row[CONFIG.COLUMNS.batteryLocation] || '';
+            }
 
             let html = `<div class="info-window">`;
             html += `<h3>${escapeHtml(customerName)}</h3>`;
