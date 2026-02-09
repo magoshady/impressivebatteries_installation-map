@@ -440,6 +440,7 @@
             map = new google.maps.Map(document.getElementById('map'), {
                 zoom: CONFIG.DEFAULT_ZOOM,
                 center: CONFIG.DEFAULT_CENTER,
+                minZoom: 7, // Prevent zooming out too far (keeps focus on Australia/NSW region)
                 styles: [
                     {
                         featureType: 'poi',
@@ -862,19 +863,33 @@
             // Update stats (only unscheduled jobs)
             document.getElementById('totalJobs').textContent = totalJobs;
 
-            // Fit map to all markers
-            if (markers.length > 0) {
+            // Fit map to visible markers only
+            const visibleMarkers = markers.filter(marker => marker.getVisible());
+            
+            if (visibleMarkers.length > 0) {
                 const bounds = new google.maps.LatLngBounds();
-                markers.forEach(marker => {
+                visibleMarkers.forEach(marker => {
                     bounds.extend(marker.getPosition());
                 });
                 
-                if (markers.length === 1) {
-                    map.setCenter(markers[0].getPosition());
+                if (visibleMarkers.length === 1) {
+                    map.setCenter(visibleMarkers[0].getPosition());
                     map.setZoom(15);
                 } else {
                     map.fitBounds(bounds);
+                    
+                    // Ensure minimum zoom level (don't zoom out too far)
+                    google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
+                        const currentZoom = map.getZoom();
+                        if (currentZoom < 8) { // Minimum zoom to keep focus on Sydney region
+                            map.setZoom(8);
+                        }
+                    });
                 }
+            } else {
+                // No visible markers, center on Sydney
+                map.setCenter(CONFIG.DEFAULT_CENTER);
+                map.setZoom(10);
             }
 
             // Update legend with counts
