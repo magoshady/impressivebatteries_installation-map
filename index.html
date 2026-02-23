@@ -332,6 +332,10 @@
         .legend-icon.lightgreen {
             background-color: #FFEB3B; /* Yellow - same as marker color */
         }
+
+        .legend-icon.nathans {
+            background-color: #795548; /* Brown - Nathans jobs */
+        }
     </style>
 </head>
 <body>
@@ -394,8 +398,9 @@
                 installationDate: 9,  // Column J - Installation date
                 systemType: 11,       // Column L - System Type (Solar Only, Battery Only, Solar + Battery)
                 inverterModel: 12,    // Column M - Inverter Model (ESYSUNHOME HM10/15/20)
-                siteInspection: 13,   // Column N - Site Inspection Needed (YES/NO)
-                contractDate: 14      // Column O - Contract Date
+                siteInspection: 13,   // Column N - Site Inspection Needed (YES/NO) or Status (FIXED/NOT FIXED) for Nathans
+                contractDate: 14,     // Column O - Contract Date
+                status: 13            // Column N - Status (FIXED/NOT FIXED) - Nathans sheet
             },
             
             // Default map center (will auto-adjust to show all markers)
@@ -418,7 +423,8 @@
             'purple': [],
             'pink': [],
             'cyan': [],
-            'lightgreen': []
+            'lightgreen': [],
+            'nathans': []
         };
         let systemTypeCounts = {
             'blue': 0,
@@ -429,7 +435,8 @@
             'purple': 0,
             'pink': 0,
             'cyan': 0,
-            'lightgreen': 0
+            'lightgreen': 0,
+            'nathans': 0
         };
         let infoWindow;
         let legendElement;
@@ -508,6 +515,11 @@
                     <div class="legend-icon lightgreen"></div>
                     <span>💡 LEADS <span id="count-lightgreen">(0)</span></span>
                 </div>
+                <div class="legend-item">
+                    <input type="checkbox" id="filter-nathans" class="filter-checkbox">
+                    <div class="legend-icon nathans"></div>
+                    <span>👷 Nathans <span id="count-nathans">(0)</span></span>
+                </div>
             `;
             
             // Add filter event listeners
@@ -516,23 +528,27 @@
                     e.stopPropagation(); // Prevent closing info window
                     const color = checkbox.id.replace('filter-', '');
                     
-                    // Special handling for LEADS checkbox
-                    if (color === 'lightgreen' && checkbox.checked) {
-                        // When LEADS is checked, uncheck and hide all others
-                        ['blue', 'orange', 'yellow', 'green', 'red', 'purple', 'pink', 'cyan'].forEach(otherColor => {
+                    // Special handling for exclusive checkboxes (LEADS, Nathans)
+                    const exclusiveFilters = ['lightgreen', 'nathans'];
+                    if (exclusiveFilters.includes(color) && checkbox.checked) {
+                        // When LEADS or Nathans is checked, uncheck and hide all others
+                        const allOthers = ['blue', 'orange', 'yellow', 'green', 'red', 'purple', 'pink', 'cyan', ...exclusiveFilters.filter(c => c !== color)];
+                        allOthers.forEach(otherColor => {
                             const otherCheckbox = legendElement.querySelector(`#filter-${otherColor}`);
                             if (otherCheckbox) {
                                 otherCheckbox.checked = false;
-                                markersByType[otherColor].forEach(marker => marker.setVisible(false));
+                                (markersByType[otherColor] || []).forEach(marker => marker.setVisible(false));
                             }
                         });
-                    } else if (color !== 'lightgreen' && checkbox.checked) {
-                        // When any other checkbox is checked, uncheck LEADS
-                        const leadsCheckbox = legendElement.querySelector('#filter-lightgreen');
-                        if (leadsCheckbox && leadsCheckbox.checked) {
-                            leadsCheckbox.checked = false;
-                            markersByType.lightgreen.forEach(marker => marker.setVisible(false));
-                        }
+                    } else if (!exclusiveFilters.includes(color) && checkbox.checked) {
+                        // When any non-exclusive checkbox is checked, uncheck LEADS and Nathans
+                        exclusiveFilters.forEach(exclusiveColor => {
+                            const exclusiveCheckbox = legendElement.querySelector(`#filter-${exclusiveColor}`);
+                            if (exclusiveCheckbox && exclusiveCheckbox.checked) {
+                                exclusiveCheckbox.checked = false;
+                                (markersByType[exclusiveColor] || []).forEach(marker => marker.setVisible(false));
+                            }
+                        });
                     }
                     
                     toggleMarkersByType(color, checkbox.checked);
@@ -571,6 +587,7 @@
                 const unscheduledUrl = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEETS_ID}/values/${CONFIG.SHEET_NAME}?key=${CONFIG.GOOGLE_MAPS_API_KEY}`;
                 const scheduledUrl = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEETS_ID}/values/Scheduled Jobs - Not yet Installed?key=${CONFIG.GOOGLE_MAPS_API_KEY}`;
                 const leadsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEETS_ID}/values/LEADS?key=${CONFIG.GOOGLE_MAPS_API_KEY}`;
+                const nathansUrl = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEETS_ID}/values/Nathans?key=${CONFIG.GOOGLE_MAPS_API_KEY}`;
                 
                 // Fetch unscheduled jobs
                 const unscheduledResponse = await fetch(unscheduledUrl);
@@ -601,16 +618,27 @@
                     console.log('LEADS sheet not found or empty, continuing without it');
                 }
                 
+                // Fetch Nathans (may not exist, so handle gracefully)
+                let nathansData = null;
+                try {
+                    const nathansResponse = await fetch(nathansUrl);
+                    if (nathansResponse.ok) {
+                        nathansData = await nathansResponse.json();
+                    }
+                } catch (nathansError) {
+                    console.log('Nathans sheet not found or empty, continuing without it');
+                }
+                
                 // Process unscheduled jobs (Sheet1)
                 if (unscheduledData.values && unscheduledData.values.length > 0) {
                     const unscheduledRows = unscheduledData.values.slice(1); // Skip header
-                    processJobData(unscheduledRows, false, false, false); // isScheduled=false, isLeads=false, skipReset=false
+                    processJobData(unscheduledRows, false, false, false, false); // isScheduled=false, isLeads=false, isNathans=false, skipReset=false
                 }
                 
                 // Process scheduled jobs (Scheduled Jobs - Not yet Installed)
                 if (scheduledData && scheduledData.values && scheduledData.values.length > 0) {
                     const scheduledRows = scheduledData.values.slice(1); // Skip header
-                    processJobData(scheduledRows, true, false, true); // isScheduled=true, isLeads=false, skipReset=true
+                    processJobData(scheduledRows, true, false, false, true); // isScheduled=true, isLeads=false, isNathans=false, skipReset=true
                 }
                 
                 // Process LEADS
@@ -624,13 +652,20 @@
                         recordId: leadsRows[0][CONFIG.COLUMNS.recordId],
                         customerName: leadsRows[0][CONFIG.COLUMNS.customerName]
                     });
-                    processJobData(leadsRows, false, true, true); // isScheduled=false, isLeads=true, skipReset=true
+                    processJobData(leadsRows, false, true, false, true); // isScheduled=false, isLeads=true, isNathans=false, skipReset=true
                     console.log(`Created ${markersByType.lightgreen.length} LEADS markers`);
+                }
+                
+                // Process Nathans
+                if (nathansData && nathansData.values && nathansData.values.length > 0) {
+                    const nathansRows = nathansData.values.slice(1); // Skip header
+                    processJobData(nathansRows, false, false, true, true); // isScheduled=false, isLeads=false, isNathans=true, skipReset=true
                 }
                 
                 if ((!unscheduledData.values || unscheduledData.values.length === 0) && 
                     (!scheduledData || !scheduledData.values || scheduledData.values.length === 0) &&
-                    (!leadsData || !leadsData.values || leadsData.values.length === 0)) {
+                    (!leadsData || !leadsData.values || leadsData.values.length === 0) &&
+                    (!nathansData || !nathansData.values || nathansData.values.length === 0)) {
                     showError('No data found in any spreadsheet.');
                     return;
                 }
@@ -669,7 +704,8 @@
             let iconColor = color;
             if (color === 'cyan') iconColor = 'ltblue';
             if (color === 'pink') iconColor = 'pink';
-            if (color === 'lightgreen') iconColor = 'yellow'; // Use yellow for LEADS (works well since LEADS is exclusive)
+            if (color === 'lightgreen') iconColor = 'yellow'; // Use yellow for LEADS (exclusive)
+            if (color === 'nathans') iconColor = 'orange'; // Use orange for Nathans (exclusive)
             
             const iconUrl = `http://maps.google.com/mapfiles/ms/icons/${iconColor}-dot.png`;
             
@@ -738,7 +774,7 @@
             let selectedTotal = 0;
             
             // Check each checkbox and add count if checked (excluding lightgreen/LEADS)
-            const checkboxes = ['orange', 'yellow', 'green', 'red', 'purple', 'pink', 'cyan'];
+            const checkboxes = ['orange', 'yellow', 'green', 'red', 'purple', 'pink', 'cyan', 'nathans'];
             checkboxes.forEach(color => {
                 const checkbox = document.getElementById(`filter-${color}`);
                 if (checkbox && checkbox.checked) {
@@ -762,6 +798,7 @@
             const pinkCount = legendElement.querySelector('#count-pink');
             const cyanCount = legendElement.querySelector('#count-cyan');
             const lightgreenCount = legendElement.querySelector('#count-lightgreen');
+            const nathansCount = legendElement.querySelector('#count-nathans');
             
             if (blueCount) blueCount.textContent = `(${systemTypeCounts.blue})`;
             if (orangeCount) orangeCount.textContent = `(${systemTypeCounts.orange})`;
@@ -772,10 +809,11 @@
             if (pinkCount) pinkCount.textContent = `(${systemTypeCounts.pink})`;
             if (cyanCount) cyanCount.textContent = `(${systemTypeCounts.cyan})`;
             if (lightgreenCount) lightgreenCount.textContent = `(${systemTypeCounts.lightgreen})`;
+            if (nathansCount) nathansCount.textContent = `(${systemTypeCounts.nathans})`;
         }
 
         // Process job data and create markers
-        function processJobData(rows, isScheduled = false, isLeads = false, skipReset = false) {
+        function processJobData(rows, isScheduled = false, isLeads = false, isNathans = false, skipReset = false) {
             const bounds = new google.maps.LatLngBounds();
             let validCount = 0;
 
@@ -790,6 +828,7 @@
                 systemTypeCounts.pink = 0;
                 systemTypeCounts.cyan = 0;
                 systemTypeCounts.lightgreen = 0;
+                systemTypeCounts.nathans = 0;
                 markersByType.blue = [];
                 markersByType.orange = [];
                 markersByType.yellow = [];
@@ -799,12 +838,13 @@
                 markersByType.pink = [];
                 markersByType.cyan = [];
                 markersByType.lightgreen = [];
+                markersByType.nathans = [];
                 jobsWithDates = []; // Reset jobs with dates tracking
             }
 
             rows.forEach((row, index) => {
                 // LEADS has different column structure: A=RecordID, B=Address, C=Lat, D=Lng
-                // Other sheets: A=RecordID, B=CustomerName, C=Address, D=Lat, E=Lng
+                // Nathans and other sheets: A=RecordID, B=CustomerName, C=Address, D=Lat, E=Lng
                 let lat, lng;
                 if (isLeads) {
                     lat = parseFloat(row[2]); // Column C
@@ -830,6 +870,9 @@
                 if (isLeads) {
                     // Priority 0: LEADS (from "LEADS" sheet)
                     markerColor = 'lightgreen';
+                } else if (isNathans) {
+                    // Priority 0b: Nathans (from "Nathans" sheet)
+                    markerColor = 'nathans';
                 } else if (isScheduled) {
                     // Priority 1: Scheduled Jobs (from "Scheduled Jobs - Not yet Installed" sheet)
                     markerColor = 'blue';
@@ -876,7 +919,7 @@
                 });
 
                 // Create info window content
-                const content = createInfoWindowContent(row, index, isLeads);
+                const content = createInfoWindowContent(row, index, isLeads, isNathans);
 
                 // Add click listener
                 marker.addListener('click', () => {
@@ -940,7 +983,7 @@
                 })));
             }
 
-            // Hide blue, purple, pink, and lightgreen (LEADS) markers by default (checkboxes start unchecked)
+            // Hide blue, purple, pink, lightgreen (LEADS), and nathans markers by default (checkboxes start unchecked)
             // MUST be done BEFORE fitting bounds
             markersByType.blue.forEach(marker => {
                 marker.setVisible(false);
@@ -952,6 +995,9 @@
                 marker.setVisible(false);
             });
             markersByType.lightgreen.forEach(marker => {
+                marker.setVisible(false);
+            });
+            markersByType.nathans.forEach(marker => {
                 marker.setVisible(false);
             });
 
@@ -992,8 +1038,8 @@
         }
 
         // Create info window HTML content
-        function createInfoWindowContent(row, index, isLeads = false) {
-            let recordId, customerName, projectAddress, systemSize, batterySize, phases, batteryLocation;
+        function createInfoWindowContent(row, index, isLeads = false, isNathans = false) {
+            let recordId, customerName, projectAddress, systemSize, batterySize, phases, batteryLocation, status;
             
             if (isLeads) {
                 // LEADS columns: A=RecordID, B=Address, C=Lat, D=Lng
@@ -1004,6 +1050,17 @@
                 batterySize = '';
                 phases = '';
                 batteryLocation = '';
+                status = '';
+            } else if (isNathans) {
+                // Nathans columns: same as Scheduled Jobs, plus N=Status (FIXED/NOT FIXED)
+                recordId = row[CONFIG.COLUMNS.recordId] || '';
+                customerName = row[CONFIG.COLUMNS.customerName] || 'Unknown';
+                projectAddress = row[CONFIG.COLUMNS.projectAddress] || '';
+                systemSize = row[CONFIG.COLUMNS.systemSize] || '';
+                batterySize = row[CONFIG.COLUMNS.batterySize] || '';
+                phases = row[CONFIG.COLUMNS.phases] || '';
+                batteryLocation = row[CONFIG.COLUMNS.batteryLocation] || '';
+                status = row[CONFIG.COLUMNS.status] || '';
             } else {
                 // Standard columns
                 recordId = row[CONFIG.COLUMNS.recordId] || '';
@@ -1013,6 +1070,7 @@
                 batterySize = row[CONFIG.COLUMNS.batterySize] || '';
                 phases = row[CONFIG.COLUMNS.phases] || '';
                 batteryLocation = row[CONFIG.COLUMNS.batteryLocation] || '';
+                status = '';
             }
 
             let html = `<div class="info-window">`;
@@ -1050,6 +1108,13 @@
                 html += `<div class="field">
                     <span class="label">📦 Battery Location:</span>
                     <span class="value">${escapeHtml(batteryLocation)}</span>
+                </div>`;
+            }
+            
+            if (status && isNathans) {
+                html += `<div class="field">
+                    <span class="label">📋 Status:</span>
+                    <span class="value">${escapeHtml(status)}</span>
                 </div>`;
             }
             
