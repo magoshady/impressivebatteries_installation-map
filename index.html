@@ -862,6 +862,18 @@
                     return;
                 }
 
+                // Filter out jobs with contract date after 28 February (only for sheets that have contract date)
+                if (!isLeads && row[CONFIG.COLUMNS.contractDate]) {
+                    const contractDate = new Date(row[CONFIG.COLUMNS.contractDate]);
+                    if (!isNaN(contractDate.getTime())) {
+                        const year = contractDate.getFullYear();
+                        const cutoff = new Date(year, 1, 28, 23, 59, 59); // 28 Feb end of day
+                        if (contractDate.getTime() > cutoff.getTime()) {
+                            return; // Skip – contract date is after 28 Feb
+                        }
+                    }
+                }
+
                 const position = { lat, lng };
                 
                 // Determine marker color based on source sheet and properties
