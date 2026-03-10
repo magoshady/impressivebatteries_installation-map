@@ -878,17 +878,12 @@
                     return;
                 }
 
-                // Filter out jobs with contract date between 1 Mar and 30 Apr 2026 (only for sheets that have contract date)
+                // Parse contract date for May2026 color logic (no filtering)
                 let contractDateMs = null;
                 if (!isLeads && row[CONFIG.COLUMNS.contractDate]) {
                     const contractDate = new Date(row[CONFIG.COLUMNS.contractDate]);
                     if (!isNaN(contractDate.getTime())) {
                         contractDateMs = contractDate.getTime();
-                        const afterFeb28 = new Date(2026, 1, 28, 23, 59, 59).getTime();
-                        const beforeMay1 = new Date(2026, 4, 1, 0, 0, 0).getTime(); // 1 May 2026 (month 4 = May)
-                        if (contractDateMs > afterFeb28 && contractDateMs < beforeMay1) {
-                            return; // Skip – contract date is 1 Mar–30 Apr 2026
-                        }
                     }
                 }
 
@@ -912,10 +907,10 @@
                     const systemType = row[CONFIG.COLUMNS.systemType] || '';
                     const inverterModel = row[CONFIG.COLUMNS.inverterModel] || '';
                     const batterySize = parseFloat(row[CONFIG.COLUMNS.batterySize]) || 0;
-                    const may1_2026 = new Date(2026, 4, 1, 0, 0, 0).getTime(); // 1 May 2026 (month 4 = May)
+                    const mar1_2026 = new Date(2026, 2, 1, 0, 0, 0).getTime(); // 1 March 2026 (month 2 = March)
                     
-                    if (contractDateMs !== null && contractDateMs >= may1_2026) {
-                        // Contract date >= 1 May 2026
+                    if (contractDateMs !== null && contractDateMs >= mar1_2026) {
+                        // Contract date >= 1 March 2026
                         markerColor = 'may2026';
                     } else if (siteInspection && siteInspection.toUpperCase().trim() === 'YES') {
                         // Priority 2: Site Inspection Needed
