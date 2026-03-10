@@ -336,6 +336,10 @@
         .legend-icon.nathans {
             background-color: #795548; /* Brown - Nathans jobs */
         }
+
+        .legend-icon.may2026 {
+            background-color: #607D8B; /* Blue grey - Contract date >= 1 May 2026 */
+        }
     </style>
 </head>
 <body>
@@ -423,6 +427,7 @@
             'purple': [],
             'pink': [],
             'cyan': [],
+            'may2026': [],
             'lightgreen': [],
             'nathans': []
         };
@@ -435,6 +440,7 @@
             'purple': 0,
             'pink': 0,
             'cyan': 0,
+            'may2026': 0,
             'lightgreen': 0,
             'nathans': 0
         };
@@ -509,6 +515,11 @@
                     <div class="legend-icon cyan"></div>
                     <span>2xHM5 <span id="count-cyan">(0)</span></span>
                 </div>
+                <div class="legend-item">
+                    <input type="checkbox" id="filter-may2026" class="filter-checkbox" checked>
+                    <div class="legend-icon may2026"></div>
+                    <span>📆 May 2026+ <span id="count-may2026">(0)</span></span>
+                </div>
                 <hr style="margin: 8px 0; border: 0; border-top: 1px solid #ddd;">
                 <div class="legend-item">
                     <input type="checkbox" id="filter-lightgreen" class="filter-checkbox">
@@ -532,7 +543,7 @@
                     const exclusiveFilters = ['lightgreen', 'nathans'];
                     if (exclusiveFilters.includes(color) && checkbox.checked) {
                         // When LEADS or Nathans is checked, uncheck and hide all others
-                        const allOthers = ['blue', 'orange', 'yellow', 'green', 'red', 'purple', 'pink', 'cyan', ...exclusiveFilters.filter(c => c !== color)];
+                        const allOthers = ['blue', 'orange', 'yellow', 'green', 'red', 'purple', 'pink', 'cyan', 'may2026', ...exclusiveFilters.filter(c => c !== color)];
                         allOthers.forEach(otherColor => {
                             const otherCheckbox = legendElement.querySelector(`#filter-${otherColor}`);
                             if (otherCheckbox) {
@@ -706,6 +717,7 @@
             if (color === 'pink') iconColor = 'pink';
             if (color === 'lightgreen') iconColor = 'yellow'; // Use yellow for LEADS (exclusive)
             if (color === 'nathans') iconColor = 'orange'; // Use orange for Nathans (exclusive)
+            if (color === 'may2026') iconColor = 'blue'; // Use blue for May 2026+ jobs
             
             const iconUrl = `http://maps.google.com/mapfiles/ms/icons/${iconColor}-dot.png`;
             
@@ -774,7 +786,7 @@
             let selectedTotal = 0;
             
             // Check each checkbox and add count if checked (excluding lightgreen/LEADS)
-            const checkboxes = ['orange', 'yellow', 'green', 'red', 'purple', 'pink', 'cyan', 'nathans'];
+            const checkboxes = ['orange', 'yellow', 'green', 'red', 'purple', 'pink', 'cyan', 'may2026', 'nathans'];
             checkboxes.forEach(color => {
                 const checkbox = document.getElementById(`filter-${color}`);
                 if (checkbox && checkbox.checked) {
@@ -797,6 +809,7 @@
             const purpleCount = legendElement.querySelector('#count-purple');
             const pinkCount = legendElement.querySelector('#count-pink');
             const cyanCount = legendElement.querySelector('#count-cyan');
+            const may2026Count = legendElement.querySelector('#count-may2026');
             const lightgreenCount = legendElement.querySelector('#count-lightgreen');
             const nathansCount = legendElement.querySelector('#count-nathans');
             
@@ -808,6 +821,7 @@
             if (purpleCount) purpleCount.textContent = `(${systemTypeCounts.purple})`;
             if (pinkCount) pinkCount.textContent = `(${systemTypeCounts.pink})`;
             if (cyanCount) cyanCount.textContent = `(${systemTypeCounts.cyan})`;
+            if (may2026Count) may2026Count.textContent = `(${systemTypeCounts.may2026})`;
             if (lightgreenCount) lightgreenCount.textContent = `(${systemTypeCounts.lightgreen})`;
             if (nathansCount) nathansCount.textContent = `(${systemTypeCounts.nathans})`;
         }
@@ -827,6 +841,7 @@
                 systemTypeCounts.purple = 0;
                 systemTypeCounts.pink = 0;
                 systemTypeCounts.cyan = 0;
+                systemTypeCounts.may2026 = 0;
                 systemTypeCounts.lightgreen = 0;
                 systemTypeCounts.nathans = 0;
                 markersByType.blue = [];
@@ -837,6 +852,7 @@
                 markersByType.purple = [];
                 markersByType.pink = [];
                 markersByType.cyan = [];
+                markersByType.may2026 = [];
                 markersByType.lightgreen = [];
                 markersByType.nathans = [];
                 jobsWithDates = []; // Reset jobs with dates tracking
@@ -862,13 +878,16 @@
                     return;
                 }
 
-                // Filter out jobs with contract date after 28 February 2026 (only for sheets that have contract date)
+                // Filter out jobs with contract date between 1 Mar and 30 Apr 2026 (only for sheets that have contract date)
+                let contractDateMs = null;
                 if (!isLeads && row[CONFIG.COLUMNS.contractDate]) {
                     const contractDate = new Date(row[CONFIG.COLUMNS.contractDate]);
                     if (!isNaN(contractDate.getTime())) {
-                        const cutoff = new Date(2026, 1, 28, 23, 59, 59); // 28 Feb 2026 end of day
-                        if (contractDate.getTime() > cutoff.getTime()) {
-                            return; // Skip – contract date is after 28 Feb 2026
+                        contractDateMs = contractDate.getTime();
+                        const afterFeb28 = new Date(2026, 1, 28, 23, 59, 59).getTime();
+                        const beforeMay1 = new Date(2026, 4, 1, 0, 0, 0).getTime(); // 1 May 2026 (month 4 = May)
+                        if (contractDateMs > afterFeb28 && contractDateMs < beforeMay1) {
+                            return; // Skip – contract date is 1 Mar–30 Apr 2026
                         }
                     }
                 }
@@ -888,13 +907,17 @@
                     // Priority 1: Scheduled Jobs (from "Scheduled Jobs - Not yet Installed" sheet)
                     markerColor = 'blue';
                 } else {
-                    // For unscheduled jobs, check other properties
+                    // For unscheduled jobs, check contract date first, then other properties
                     const siteInspection = row[CONFIG.COLUMNS.siteInspection] || '';
                     const systemType = row[CONFIG.COLUMNS.systemType] || '';
                     const inverterModel = row[CONFIG.COLUMNS.inverterModel] || '';
                     const batterySize = parseFloat(row[CONFIG.COLUMNS.batterySize]) || 0;
+                    const may1_2026 = new Date(2026, 4, 1, 0, 0, 0).getTime(); // 1 May 2026 (month 4 = May)
                     
-                    if (siteInspection && siteInspection.toUpperCase().trim() === 'YES') {
+                    if (contractDateMs !== null && contractDateMs >= may1_2026) {
+                        // Contract date >= 1 May 2026
+                        markerColor = 'may2026';
+                    } else if (siteInspection && siteInspection.toUpperCase().trim() === 'YES') {
                         // Priority 2: Site Inspection Needed
                         markerColor = 'orange';
                     } else if (batterySize > 40 && inverterModel && inverterModel.includes('HM5')) {
@@ -966,7 +989,7 @@
             // Calculate total jobs (excluding scheduled jobs in blue)
             const totalJobs = systemTypeCounts.orange + systemTypeCounts.yellow + 
                              systemTypeCounts.green + systemTypeCounts.red + 
-                             systemTypeCounts.purple + systemTypeCounts.pink + systemTypeCounts.cyan;
+                             systemTypeCounts.purple + systemTypeCounts.pink + systemTypeCounts.cyan + systemTypeCounts.may2026;
             
             // Update stats (only unscheduled jobs)
             document.getElementById('totalJobs').textContent = totalJobs;
