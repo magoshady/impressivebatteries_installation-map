@@ -412,7 +412,8 @@
 
         let map;
         let markers = [];
-        let markerClusterer = null;
+        /** Clusterer instance (must not be named markerClusterer — conflicts with @googlemaps/markerclusterer UMD global). */
+        let clustererInstance = null;
         let markersByType = {
             'blue': [], 'orange': [], 'yellow': [], 'green': [],
             'hmSeries': [], 'may2026': [], 'lightgreen': [], 'nathans': []
@@ -666,7 +667,7 @@
                 marker.setVisible(typeOn && phaseOn && searchOn);
             });
 
-            if (markerClusterer) updateClusterer();
+            if (clustererInstance) updateClusterer();
             updateSelectedCount();
             updateJobList();
         }
@@ -721,20 +722,20 @@
         // ========================================
 
         function initClusterer() {
-            if (typeof markerClusterer !== 'undefined' && markerClusterer) {
-                markerClusterer.clearMarkers();
+            if (clustererInstance) {
+                clustererInstance.clearMarkers();
             }
             const visibleMarkers = markers.filter(m => m.getVisible());
             if (window.markerClusterer && window.markerClusterer.MarkerClusterer) {
-                markerClusterer = new window.markerClusterer.MarkerClusterer({ map, markers: visibleMarkers });
+                clustererInstance = new window.markerClusterer.MarkerClusterer({ map, markers: visibleMarkers });
             }
         }
 
         function updateClusterer() {
-            if (!markerClusterer) return;
-            markerClusterer.clearMarkers();
+            if (!clustererInstance) return;
+            clustererInstance.clearMarkers();
             const visibleMarkers = markers.filter(m => m.getVisible());
-            markerClusterer.addMarkers(visibleMarkers);
+            clustererInstance.addMarkers(visibleMarkers);
         }
 
         // ========================================
