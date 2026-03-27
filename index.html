@@ -338,7 +338,18 @@
         }
 
         .legend-icon.may2026 {
-            background-color: #607D8B; /* Blue grey - Contract date >= 1 May 2026 */
+            background-color: #607D8B; /* Blue grey - May 2026+ (contract from 1 Mar 2026) */
+        }
+
+        .legend-icon.hmSeries {
+            background-color: #9C27B0; /* HM10 / HM15 / HM20 bundled */
+        }
+
+        .legend-battery-heading {
+            margin: 8px 0 4px 0;
+            font-size: 12px;
+            font-weight: 600;
+            color: #555;
         }
     </style>
 </head>
@@ -399,13 +410,17 @@
                 batterySize: 6,       // Column G - Battery Size [kWh]
                 phases: 7,            // Column H - Phases
                 batteryLocation: 8,   // Column I - Battery Location
-                installationDate: 9,  // Column J - Installation date
-                systemType: 11,       // Column L - System Type (Solar Only, Battery Only, Solar + Battery)
-                inverterModel: 12,    // Column M - Inverter Model (ESYSUNHOME HM10/15/20)
-                siteInspection: 13,   // Column N - Site Inspection Needed (YES/NO) or Status (FIXED/NOT FIXED) for Nathans
-                contractDate: 14,     // Column O - Contract Date
-                status: 13            // Column N - Status (FIXED/NOT FIXED) - Nathans sheet
+                installationDateRaw: 9,  // Column J - Installation date_raw
+                installationDate: 10,    // Column K - Installation Date
+                systemType: 11,          // Column L - Type of System
+                batteryManufacturer: 12, // Column M - Battery Manufacturer (Sheet1)
+                inverterModel: 13,       // Column N - Inverter Model
+                siteInspection: 14,      // Column O - Site Inspection Needed (YES/NO)
+                contractDate: 15         // Column P - Contract Date
             },
+
+            // Nathans tab: Status (FIXED/NOT FIXED). Use 13 if that sheet has no Battery Manufacturer column; use 14 if it matches Sheet1 layout
+            NATHANS_STATUS_COLUMN: 13,
             
             // Default map center (will auto-adjust to show all markers)
             DEFAULT_CENTER: { lat: -33.8688, lng: 151.2093 }, // Sydney, Australia
@@ -418,15 +433,13 @@
 
         let map;
         let markers = [];
+        /** Core marker buckets; Battery Only uses dynamic keys mfg_* added at runtime */
         let markersByType = {
             'blue': [],
             'orange': [],
             'yellow': [],
             'green': [],
-            'red': [],
-            'purple': [],
-            'pink': [],
-            'cyan': [],
+            'hmSeries': [],
             'may2026': [],
             'lightgreen': [],
             'nathans': []
@@ -436,17 +449,92 @@
             'orange': 0,
             'yellow': 0,
             'green': 0,
-            'red': 0,
-            'purple': 0,
-            'pink': 0,
-            'cyan': 0,
+            'hmSeries': 0,
             'may2026': 0,
             'lightgreen': 0,
             'nathans': 0
         };
+        let batteryManufacturerKeys = []; // ordered keys mfg_*
+        let batteryManufacturerLabels = {}; // key -> display label
         let infoWindow;
         let legendElement;
         let jobsWithDates = []; // Track jobs with contract dates for oldest identification
+
+        // Distinct marker icon colors for battery manufacturers (Google Maps ms icons)
+        const MFG_MARKER_ICONS = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'ltblue'];
+        const MFG_LEGEND_HEX = ['#F44336', '#FF9800', '#FFEB3B', '#4CAF50', '#2196F3', '#9C27B0', '#E91E63', '#00BCD4'];
+
+        function isBatteryOnly(systemType) {
+            const t = (systemType || '').toLowerCase().trim();
+            return t.includes('battery only') || t === 'battery only';
+        }
+
+        function manufacturerToKey(raw) {
+            const s = (raw || '').trim();
+            if (!s) return 'mfg_unknown';
+            const slug = s.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 48);
+            return slug ? 'mfg_' + slug : 'mfg_unknown';
+        }
+
+        /** Scan Sheet1 rows for Battery Only jobs; build per-manufacturer legend and marker buckets */
+        function prepareBatteryManufacturerFilters(rows) {
+            const seen = new Map();
+            rows.forEach(row => {
+                const systemType = row[CONFIG.COLUMNS.systemType] || '';
+                if (!isBatteryOnly(systemType)) return;
+                const raw = (row[CONFIG.COLUMNS.batteryManufacturer] || '').trim();
+                const key = manufacturerToKey(raw);
+                const label = raw || 'Unknown manufacturer';
+                if (!seen.has(key)) seen.set(key, label);
+            });
+            batteryManufacturerKeys = Array.from(seen.entries())
+                .sort((a, b) => a[1].localeCompare(b[1], undefined, { sensitivity: 'base' }))
+                .map(([k]) => k);
+            batteryManufacturerLabels = Object.fromEntries(seen);
+
+            batteryManufacturerKeys.forEach(k => {
+                markersByType[k] = [];
+                systemTypeCounts[k] = 0;
+            });
+
+            const container = document.getElementById('legend-battery-manufacturers');
+            if (!container) return;
+            container.innerHTML = '';
+            if (batteryManufacturerKeys.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+            container.style.display = 'block';
+            const heading = document.createElement('div');
+            heading.className = 'legend-battery-heading';
+            heading.textContent = 'Battery only (by manufacturer)';
+            container.appendChild(heading);
+            batteryManufacturerKeys.forEach((key, i) => {
+                const hex = MFG_LEGEND_HEX[i % MFG_LEGEND_HEX.length];
+                const label = batteryManufacturerLabels[key];
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.className = 'filter-checkbox';
+                cb.id = 'filter-' + key;
+                cb.checked = true;
+                const icon = document.createElement('div');
+                icon.className = 'legend-icon';
+                icon.style.backgroundColor = hex;
+                icon.style.border = '1.5px solid #666';
+                const span = document.createElement('span');
+                span.appendChild(document.createTextNode(label + ' '));
+                const cnt = document.createElement('span');
+                cnt.id = 'count-' + key;
+                cnt.textContent = '(0)';
+                span.appendChild(cnt);
+                item.appendChild(cb);
+                item.appendChild(icon);
+                item.appendChild(span);
+                container.appendChild(item);
+            });
+        }
 
         // Initialize the map
         function initMap() {
@@ -496,30 +584,16 @@
                     <span>Solar & Battery <span id="count-green">(0)</span></span>
                 </div>
                 <div class="legend-item">
-                    <input type="checkbox" id="filter-red" class="filter-checkbox" checked>
-                    <div class="legend-icon red"></div>
-                    <span>Battery Only <span id="count-red">(0)</span></span>
-                </div>
-                <div class="legend-item">
-                    <input type="checkbox" id="filter-purple" class="filter-checkbox">
-                    <div class="legend-icon purple"></div>
-                    <span>HM10 <span id="count-purple">(0)</span></span>
-                </div>
-                <div class="legend-item">
-                    <input type="checkbox" id="filter-pink" class="filter-checkbox">
-                    <div class="legend-icon pink"></div>
-                    <span>HM15/20 <span id="count-pink">(0)</span></span>
-                </div>
-                <div class="legend-item">
-                    <input type="checkbox" id="filter-cyan" class="filter-checkbox" checked>
-                    <div class="legend-icon cyan"></div>
-                    <span>2xHM5 <span id="count-cyan">(0)</span></span>
+                    <input type="checkbox" id="filter-hmSeries" class="filter-checkbox">
+                    <div class="legend-icon hmSeries"></div>
+                    <span>HM10 / HM15 / HM20 <span id="count-hmSeries">(0)</span></span>
                 </div>
                 <div class="legend-item">
                     <input type="checkbox" id="filter-may2026" class="filter-checkbox" checked>
                     <div class="legend-icon may2026"></div>
                     <span>📆 May 2026+ <span id="count-may2026">(0)</span></span>
                 </div>
+                <div id="legend-battery-manufacturers"></div>
                 <hr style="margin: 8px 0; border: 0; border-top: 1px solid #ddd;">
                 <div class="legend-item">
                     <input type="checkbox" id="filter-lightgreen" class="filter-checkbox">
@@ -533,37 +607,32 @@
                 </div>
             `;
             
-            // Add filter event listeners
-            legendElement.querySelectorAll('.filter-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', (e) => {
-                    e.stopPropagation(); // Prevent closing info window
-                    const color = checkbox.id.replace('filter-', '');
-                    
-                    // Special handling for exclusive checkboxes (LEADS, Nathans)
-                    const exclusiveFilters = ['lightgreen', 'nathans'];
-                    if (exclusiveFilters.includes(color) && checkbox.checked) {
-                        // When LEADS or Nathans is checked, uncheck and hide all others
-                        const allOthers = ['blue', 'orange', 'yellow', 'green', 'red', 'purple', 'pink', 'cyan', 'may2026', ...exclusiveFilters.filter(c => c !== color)];
-                        allOthers.forEach(otherColor => {
-                            const otherCheckbox = legendElement.querySelector(`#filter-${otherColor}`);
-                            if (otherCheckbox) {
-                                otherCheckbox.checked = false;
-                                (markersByType[otherColor] || []).forEach(marker => marker.setVisible(false));
-                            }
-                        });
-                    } else if (!exclusiveFilters.includes(color) && checkbox.checked) {
-                        // When any non-exclusive checkbox is checked, uncheck LEADS and Nathans
-                        exclusiveFilters.forEach(exclusiveColor => {
-                            const exclusiveCheckbox = legendElement.querySelector(`#filter-${exclusiveColor}`);
-                            if (exclusiveCheckbox && exclusiveCheckbox.checked) {
-                                exclusiveCheckbox.checked = false;
-                                (markersByType[exclusiveColor] || []).forEach(marker => marker.setVisible(false));
-                            }
-                        });
-                    }
-                    
-                    toggleMarkersByType(color, checkbox.checked);
-                });
+            // Filter checkboxes (including dynamic manufacturer rows) — event delegation
+            legendElement.addEventListener('change', (e) => {
+                const checkbox = e.target;
+                if (!checkbox.classList || !checkbox.classList.contains('filter-checkbox')) return;
+                e.stopPropagation();
+                const color = checkbox.id.replace(/^filter-/, '');
+                const exclusiveFilters = ['lightgreen', 'nathans'];
+                if (exclusiveFilters.includes(color) && checkbox.checked) {
+                    const allOthers = ['blue', 'orange', 'yellow', 'green', 'hmSeries', 'may2026', ...batteryManufacturerKeys, ...exclusiveFilters.filter(c => c !== color)];
+                    allOthers.forEach(otherColor => {
+                        const otherCheckbox = legendElement.querySelector(`#filter-${otherColor}`);
+                        if (otherCheckbox) {
+                            otherCheckbox.checked = false;
+                            (markersByType[otherColor] || []).forEach(marker => marker.setVisible(false));
+                        }
+                    });
+                } else if (!exclusiveFilters.includes(color) && checkbox.checked) {
+                    exclusiveFilters.forEach(exclusiveColor => {
+                        const exclusiveCheckbox = legendElement.querySelector(`#filter-${exclusiveColor}`);
+                        if (exclusiveCheckbox && exclusiveCheckbox.checked) {
+                            exclusiveCheckbox.checked = false;
+                            (markersByType[exclusiveColor] || []).forEach(marker => marker.setVisible(false));
+                        }
+                    });
+                }
+                toggleMarkersByType(color, checkbox.checked);
             });
             
             // Prevent closing info window when clicking on legend (except checkboxes)
@@ -640,9 +709,10 @@
                     console.log('Nathans sheet not found or empty, continuing without it');
                 }
                 
-                // Process unscheduled jobs (Sheet1)
+                // Process unscheduled jobs (Sheet1) — discover Battery Only manufacturers first
                 if (unscheduledData.values && unscheduledData.values.length > 0) {
                     const unscheduledRows = unscheduledData.values.slice(1); // Skip header
+                    prepareBatteryManufacturerFilters(unscheduledRows);
                     processJobData(unscheduledRows, false, false, false, false); // isScheduled=false, isLeads=false, isNathans=false, skipReset=false
                 }
                 
@@ -690,35 +760,26 @@
             }
         }
 
-        // Get marker color based on system type
+        // Solar Only / Solar & Battery only (Battery Only uses manufacturer keys)
         function getMarkerColor(systemType) {
-            if (!systemType) return 'red'; // Default to red if no system type
-            
+            if (!systemType) return 'green';
             const type = systemType.toLowerCase().trim();
-            
-            if (type.includes('solar only') || type === 'solar only') {
-                return 'yellow';
-            } else if (type.includes('solar & battery') || type.includes('solar&battery') || type.includes('solar and battery')) {
-                return 'green';
-            } else if (type.includes('battery only') || type === 'battery only') {
-                return 'red';
-            }
-            
-            // Default
-            return 'red';
+            if (type.includes('solar only') || type === 'solar only') return 'yellow';
+            if (type.includes('solar & battery') || type.includes('solar&battery') || type.includes('solar and battery')) return 'green';
+            return 'green';
         }
 
         // Get marker icon URL based on color
         function getMarkerIcon(color, isOldest = false) {
-            // Use Google's chart API for colored markers
-            // Map colors to Google Maps icon names
             let iconColor = color;
-            if (color === 'cyan') iconColor = 'ltblue';
-            if (color === 'pink') iconColor = 'pink';
-            if (color === 'lightgreen') iconColor = 'yellow'; // Use yellow for LEADS (exclusive)
-            if (color === 'nathans') iconColor = 'orange'; // Use orange for Nathans (exclusive)
-            if (color === 'may2026') iconColor = 'blue'; // Use blue for May 2026+ jobs
-            
+            if (color === 'hmSeries') iconColor = 'purple';
+            if (color === 'lightgreen') iconColor = 'yellow';
+            if (color === 'nathans') iconColor = 'orange';
+            if (color === 'may2026') iconColor = 'blue';
+            if (color && color.indexOf('mfg_') === 0) {
+                const idx = batteryManufacturerKeys.indexOf(color);
+                iconColor = MFG_MARKER_ICONS[(idx >= 0 ? idx : 0) % MFG_MARKER_ICONS.length];
+            }
             const iconUrl = `http://maps.google.com/mapfiles/ms/icons/${iconColor}-dot.png`;
             
             // If this is one of the oldest jobs, make it larger
@@ -785,12 +846,17 @@
         function updateSelectedCount() {
             let selectedTotal = 0;
             
-            // Check each checkbox and add count if checked (excluding lightgreen/LEADS)
-            const checkboxes = ['orange', 'yellow', 'green', 'red', 'purple', 'pink', 'cyan', 'may2026', 'nathans'];
+            const checkboxes = ['orange', 'yellow', 'green', 'hmSeries', 'may2026', 'nathans'];
             checkboxes.forEach(color => {
                 const checkbox = document.getElementById(`filter-${color}`);
                 if (checkbox && checkbox.checked) {
-                    selectedTotal += systemTypeCounts[color];
+                    selectedTotal += systemTypeCounts[color] || 0;
+                }
+            });
+            batteryManufacturerKeys.forEach(color => {
+                const checkbox = document.getElementById(`filter-${color}`);
+                if (checkbox && checkbox.checked) {
+                    selectedTotal += systemTypeCounts[color] || 0;
                 }
             });
             
@@ -805,10 +871,7 @@
             const orangeCount = legendElement.querySelector('#count-orange');
             const yellowCount = legendElement.querySelector('#count-yellow');
             const greenCount = legendElement.querySelector('#count-green');
-            const redCount = legendElement.querySelector('#count-red');
-            const purpleCount = legendElement.querySelector('#count-purple');
-            const pinkCount = legendElement.querySelector('#count-pink');
-            const cyanCount = legendElement.querySelector('#count-cyan');
+            const hmSeriesCount = legendElement.querySelector('#count-hmSeries');
             const may2026Count = legendElement.querySelector('#count-may2026');
             const lightgreenCount = legendElement.querySelector('#count-lightgreen');
             const nathansCount = legendElement.querySelector('#count-nathans');
@@ -817,13 +880,14 @@
             if (orangeCount) orangeCount.textContent = `(${systemTypeCounts.orange})`;
             if (yellowCount) yellowCount.textContent = `(${systemTypeCounts.yellow})`;
             if (greenCount) greenCount.textContent = `(${systemTypeCounts.green})`;
-            if (redCount) redCount.textContent = `(${systemTypeCounts.red})`;
-            if (purpleCount) purpleCount.textContent = `(${systemTypeCounts.purple})`;
-            if (pinkCount) pinkCount.textContent = `(${systemTypeCounts.pink})`;
-            if (cyanCount) cyanCount.textContent = `(${systemTypeCounts.cyan})`;
+            if (hmSeriesCount) hmSeriesCount.textContent = `(${systemTypeCounts.hmSeries})`;
             if (may2026Count) may2026Count.textContent = `(${systemTypeCounts.may2026})`;
             if (lightgreenCount) lightgreenCount.textContent = `(${systemTypeCounts.lightgreen})`;
             if (nathansCount) nathansCount.textContent = `(${systemTypeCounts.nathans})`;
+            batteryManufacturerKeys.forEach(key => {
+                const el = legendElement.querySelector(`#count-${key}`);
+                if (el) el.textContent = `(${systemTypeCounts[key] || 0})`;
+            });
         }
 
         // Process job data and create markers
@@ -837,10 +901,7 @@
                 systemTypeCounts.orange = 0;
                 systemTypeCounts.yellow = 0;
                 systemTypeCounts.green = 0;
-                systemTypeCounts.red = 0;
-                systemTypeCounts.purple = 0;
-                systemTypeCounts.pink = 0;
-                systemTypeCounts.cyan = 0;
+                systemTypeCounts.hmSeries = 0;
                 systemTypeCounts.may2026 = 0;
                 systemTypeCounts.lightgreen = 0;
                 systemTypeCounts.nathans = 0;
@@ -848,14 +909,15 @@
                 markersByType.orange = [];
                 markersByType.yellow = [];
                 markersByType.green = [];
-                markersByType.red = [];
-                markersByType.purple = [];
-                markersByType.pink = [];
-                markersByType.cyan = [];
+                markersByType.hmSeries = [];
                 markersByType.may2026 = [];
                 markersByType.lightgreen = [];
                 markersByType.nathans = [];
-                jobsWithDates = []; // Reset jobs with dates tracking
+                batteryManufacturerKeys.forEach(k => {
+                    systemTypeCounts[k] = 0;
+                    markersByType[k] = [];
+                });
+                jobsWithDates = [];
             }
 
             rows.forEach((row, index) => {
@@ -906,26 +968,17 @@
                     const siteInspection = row[CONFIG.COLUMNS.siteInspection] || '';
                     const systemType = row[CONFIG.COLUMNS.systemType] || '';
                     const inverterModel = row[CONFIG.COLUMNS.inverterModel] || '';
-                    const batterySize = parseFloat(row[CONFIG.COLUMNS.batterySize]) || 0;
                     const mar1_2026 = new Date(2026, 2, 1, 0, 0, 0).getTime(); // 1 March 2026 (month 2 = March)
                     
                     if (contractDateMs !== null && contractDateMs >= mar1_2026) {
-                        // Contract date >= 1 March 2026
                         markerColor = 'may2026';
                     } else if (siteInspection && siteInspection.toUpperCase().trim() === 'YES') {
-                        // Priority 2: Site Inspection Needed
                         markerColor = 'orange';
-                    } else if (batterySize > 40 && inverterModel && inverterModel.includes('HM5')) {
-                        // Priority 3: Battery Size > 40kWh AND Inverter Model is HM5
-                        markerColor = 'cyan';
-                    } else if (inverterModel && inverterModel.includes('HM10')) {
-                        // Priority 4: HM10 Inverters (ESYSUNHOME HM10, ESYSUNHOME HM10 Single Phase)
-                        markerColor = 'purple';
-                    } else if (inverterModel && (inverterModel.includes('HM15') || inverterModel.includes('HM20'))) {
-                        // Priority 5: HM15/20 Inverters
-                        markerColor = 'pink';
+                    } else if (inverterModel && (inverterModel.includes('HM10') || inverterModel.includes('HM15') || inverterModel.includes('HM20'))) {
+                        markerColor = 'hmSeries';
+                    } else if (isBatteryOnly(systemType)) {
+                        markerColor = manufacturerToKey(row[CONFIG.COLUMNS.batteryManufacturer] || '');
                     } else {
-                        // Priority 6: System Type (Solar Only, Solar & Battery, Battery Only)
                         markerColor = getMarkerColor(systemType);
                     }
                 }
@@ -957,14 +1010,19 @@
                 });
 
                 markers.push(marker);
+                if (!markersByType[markerColor]) {
+                    markersByType[markerColor] = [];
+                    systemTypeCounts[markerColor] = 0;
+                }
                 markersByType[markerColor].push(marker);
                 systemTypeCounts[markerColor]++;
                 bounds.extend(position);
                 validCount++;
                 
-                // Track jobs with contract dates for oldest identification (only yellow/green/red)
-                if ((markerColor === 'yellow' || markerColor === 'green' || markerColor === 'red') && 
-                    row[CONFIG.COLUMNS.contractDate]) {
+                // Track jobs with contract dates for oldest identification
+                const isOldestEligible = markerColor === 'yellow' || markerColor === 'green' || markerColor === 'hmSeries' ||
+                    (markerColor && markerColor.indexOf('mfg_') === 0);
+                if (isOldestEligible && row[CONFIG.COLUMNS.contractDate]) {
                     const contractDate = new Date(row[CONFIG.COLUMNS.contractDate]);
                     if (!isNaN(contractDate.getTime())) {
                         jobsWithDates.push({
@@ -981,10 +1039,11 @@
 
         // Finalize map after all data is loaded
         function finalizeMap() {
-            // Calculate total jobs (excluding scheduled jobs in blue)
-            const totalJobs = systemTypeCounts.orange + systemTypeCounts.yellow + 
-                             systemTypeCounts.green + systemTypeCounts.red + 
-                             systemTypeCounts.purple + systemTypeCounts.pink + systemTypeCounts.cyan + systemTypeCounts.may2026;
+            let totalJobs = systemTypeCounts.orange + systemTypeCounts.yellow +
+                systemTypeCounts.green + systemTypeCounts.hmSeries + systemTypeCounts.may2026;
+            batteryManufacturerKeys.forEach(k => {
+                totalJobs += systemTypeCounts[k] || 0;
+            });
             
             // Update stats (only unscheduled jobs)
             document.getElementById('totalJobs').textContent = totalJobs;
@@ -993,7 +1052,7 @@
             console.log('Final counts:', systemTypeCounts);
             updateLegendCounts();
 
-            // Identify and highlight the 5 oldest jobs (yellow/green/red only)
+            // Identify and highlight the 5 oldest jobs (solar types, HM series, battery-by-manufacturer)
             if (jobsWithDates.length > 0) {
                 // Sort by contract date (oldest first)
                 jobsWithDates.sort((a, b) => a.contractDate - b.contractDate);
@@ -1012,15 +1071,11 @@
                 })));
             }
 
-            // Hide blue, purple, pink, lightgreen (LEADS), and nathans markers by default (checkboxes start unchecked)
-            // MUST be done BEFORE fitting bounds
+            // Hide blue, HM series, lightgreen (LEADS), and nathans markers by default (checkboxes start unchecked)
             markersByType.blue.forEach(marker => {
                 marker.setVisible(false);
             });
-            markersByType.purple.forEach(marker => {
-                marker.setVisible(false);
-            });
-            markersByType.pink.forEach(marker => {
+            markersByType.hmSeries.forEach(marker => {
                 marker.setVisible(false);
             });
             markersByType.lightgreen.forEach(marker => {
@@ -1089,9 +1144,9 @@
                 batterySize = row[CONFIG.COLUMNS.batterySize] || '';
                 phases = row[CONFIG.COLUMNS.phases] || '';
                 batteryLocation = row[CONFIG.COLUMNS.batteryLocation] || '';
-                status = row[CONFIG.COLUMNS.status] || '';
+                status = row[CONFIG.NATHANS_STATUS_COLUMN] || '';
             } else {
-                // Standard columns
+                // Standard columns (Sheet1 layout includes Battery Manufacturer)
                 recordId = row[CONFIG.COLUMNS.recordId] || '';
                 customerName = row[CONFIG.COLUMNS.customerName] || 'Unknown Customer';
                 projectAddress = row[CONFIG.COLUMNS.projectAddress] || '';
@@ -1101,6 +1156,8 @@
                 batteryLocation = row[CONFIG.COLUMNS.batteryLocation] || '';
                 status = '';
             }
+
+            const batteryManufacturer = (!isLeads && !isNathans) ? (row[CONFIG.COLUMNS.batteryManufacturer] || '') : '';
 
             let html = `<div class="info-window">`;
             html += `<h3>${escapeHtml(customerName)}</h3>`;
@@ -1137,6 +1194,13 @@
                 html += `<div class="field">
                     <span class="label">📦 Battery Location:</span>
                     <span class="value">${escapeHtml(batteryLocation)}</span>
+                </div>`;
+            }
+
+            if (batteryManufacturer) {
+                html += `<div class="field">
+                    <span class="label">🏭 Battery Manufacturer:</span>
+                    <span class="value">${escapeHtml(batteryManufacturer)}</span>
                 </div>`;
             }
             
