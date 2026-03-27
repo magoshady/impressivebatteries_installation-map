@@ -434,8 +434,26 @@
         let allJobEntries = [];
         let searchTerm = '';
 
-        const MFG_MARKER_ICONS = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'ltblue'];
-        const MFG_LEGEND_HEX = ['#F44336', '#FF9800', '#FFEB3B', '#4CAF50', '#2196F3', '#9C27B0', '#E91E63', '#00BCD4'];
+        const MFG_MARKER_ICONS_FALLBACK = ['purple', 'pink', 'ltblue', 'orange', 'yellow'];
+        const MFG_LEGEND_HEX_FALLBACK = ['#9C27B0', '#E91E63', '#00BCD4', '#FF9800', '#FFEB3B'];
+
+        const MFG_COLOR_OVERRIDES = {
+            'mfg_esy':        { icon: 'green',  hex: '#4CAF50' },
+            'mfg_sigenergy':  { icon: 'blue',   hex: '#2196F3' },
+            'mfg_goodwe':     { icon: 'red',    hex: '#F44336' },
+        };
+
+        function getMfgIcon(key) {
+            if (MFG_COLOR_OVERRIDES[key]) return MFG_COLOR_OVERRIDES[key].icon;
+            const idx = batteryManufacturerKeys.filter(k => !MFG_COLOR_OVERRIDES[k]).indexOf(key);
+            return MFG_MARKER_ICONS_FALLBACK[(idx >= 0 ? idx : 0) % MFG_MARKER_ICONS_FALLBACK.length];
+        }
+
+        function getMfgHex(key) {
+            if (MFG_COLOR_OVERRIDES[key]) return MFG_COLOR_OVERRIDES[key].hex;
+            const idx = batteryManufacturerKeys.filter(k => !MFG_COLOR_OVERRIDES[k]).indexOf(key);
+            return MFG_LEGEND_HEX_FALLBACK[(idx >= 0 ? idx : 0) % MFG_LEGEND_HEX_FALLBACK.length];
+        }
 
         const TYPE_COLOR_MAP = {
             'blue': '#2196F3', 'orange': '#FF9800', 'yellow': '#FFEB3B',
@@ -500,7 +518,7 @@
             batteryManufacturerKeys.forEach(k => {
                 markersByType[k] = [];
                 systemTypeCounts[k] = 0;
-                TYPE_COLOR_MAP[k] = MFG_LEGEND_HEX[batteryManufacturerKeys.indexOf(k) % MFG_LEGEND_HEX.length];
+                TYPE_COLOR_MAP[k] = getMfgHex(k);
             });
         }
 
@@ -513,7 +531,7 @@
             heading.textContent = 'Battery only (by mfg)';
             container.appendChild(heading);
             batteryManufacturerKeys.forEach((key, i) => {
-                const hex = MFG_LEGEND_HEX[i % MFG_LEGEND_HEX.length];
+                const hex = getMfgHex(key);
                 const label = batteryManufacturerLabels[key];
                 const item = document.createElement('div');
                 item.className = 'legend-item';
@@ -570,8 +588,9 @@
                 <div class="legend-section">
                     <div class="legend-section-head" data-section="phases"><span class="arrow">&#9654;</span> Phases</div>
                     <div class="legend-section-body" id="sec-phases">
-                        <div class="legend-item"><input type="checkbox" class="filter-checkbox phase-filter" id="filter-phase-single" checked><span>Single Phase <span id="count-phase-single">(0)</span></span></div>
-                        <div class="legend-item"><input type="checkbox" class="filter-checkbox phase-filter" id="filter-phase-3" checked><span>3 Phase <span id="count-phase-3">(0)</span></span></div>
+                        <div class="legend-item"><input type="radio" name="phase-filter" class="phase-radio" id="filter-phase-all" value="all" checked><span>All Phases</span></div>
+                        <div class="legend-item"><input type="radio" name="phase-filter" class="phase-radio" id="filter-phase-single" value="single"><span>Single Phase Only <span id="count-phase-single">(0)</span></span></div>
+                        <div class="legend-item"><input type="radio" name="phase-filter" class="phase-radio" id="filter-phase-3" value="3"><span>3 Phase Only <span id="count-phase-3">(0)</span></span></div>
                     </div>
                 </div>
                 <div class="legend-section">
@@ -603,14 +622,15 @@
 
             // Filter event delegation
             legendElement.addEventListener('change', (e) => {
-                const checkbox = e.target;
-                if (!checkbox.classList.contains('filter-checkbox')) return;
-                e.stopPropagation();
-
-                if (checkbox.classList.contains('phase-filter')) {
+                if (e.target.classList.contains('phase-radio')) {
+                    e.stopPropagation();
                     applyAllFilters();
                     return;
                 }
+
+                const checkbox = e.target;
+                if (!checkbox.classList.contains('filter-checkbox')) return;
+                e.stopPropagation();
 
                 const color = checkbox.id.replace(/^filter-/, '');
                 const exclusiveFilters = ['lightgreen', 'nathans'];
@@ -644,8 +664,8 @@
         // ========================================
 
         function applyAllFilters() {
-            const singleOn = document.getElementById('filter-phase-single')?.checked ?? true;
-            const threeOn = document.getElementById('filter-phase-3')?.checked ?? true;
+            const phaseRadio = document.querySelector('input[name="phase-filter"]:checked');
+            const phaseValue = phaseRadio ? phaseRadio.value : 'all';
             const lowerSearch = searchTerm.toLowerCase();
 
             markers.forEach(marker => {
@@ -656,8 +676,8 @@
                 const typeOn = typeCheckbox ? typeCheckbox.checked : true;
 
                 let phaseOn = true;
-                if (meta.phase === 'Single Phase') phaseOn = singleOn;
-                else if (meta.phase === '3 Phase') phaseOn = threeOn;
+                if (phaseValue === 'single') phaseOn = meta.phase === 'Single Phase' || !meta.phase;
+                else if (phaseValue === '3') phaseOn = meta.phase === '3 Phase' || !meta.phase;
 
                 let searchOn = true;
                 if (lowerSearch && meta.address) {
@@ -809,8 +829,7 @@
             if (color === 'nathans') iconColor = 'orange';
             if (color === 'may2026') iconColor = 'blue';
             if (color && color.indexOf('mfg_') === 0) {
-                const idx = batteryManufacturerKeys.indexOf(color);
-                iconColor = MFG_MARKER_ICONS[(idx >= 0 ? idx : 0) % MFG_MARKER_ICONS.length];
+                iconColor = getMfgIcon(color);
             }
             const iconUrl = `http://maps.google.com/mapfiles/ms/icons/${iconColor}-dot.png`;
             if (isOldest) {
@@ -827,8 +846,7 @@
         function getColorHex(color) {
             if (TYPE_COLOR_MAP[color]) return TYPE_COLOR_MAP[color];
             if (color && color.indexOf('mfg_') === 0) {
-                const idx = batteryManufacturerKeys.indexOf(color);
-                return MFG_LEGEND_HEX[(idx >= 0 ? idx : 0) % MFG_LEGEND_HEX.length];
+                return getMfgHex(color);
             }
             return '#999';
         }
