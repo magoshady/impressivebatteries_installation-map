@@ -8,11 +8,7 @@
     <link rel="shortcut icon" type="image/png" href="https://i.imgur.com/t5ShsuD.png">
     <link rel="apple-touch-icon" href="https://i.imgur.com/t5ShsuD.png">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -24,332 +20,313 @@
         header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 1.5rem 2rem;
+            padding: 1rem 2rem;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            flex-shrink: 0;
         }
+        h1 { font-size: 1.5rem; font-weight: 600; }
+        .subtitle { font-size: 0.9rem; opacity: 0.9; margin-top: 0.2rem; }
 
-        h1 {
-            font-size: 1.5rem;
-            font-weight: 600;
-        }
-
-        .subtitle {
-            font-size: 0.9rem;
-            opacity: 0.9;
-            margin-top: 0.3rem;
-        }
-
-        /* Mobile header optimization */
         @media (max-width: 768px) {
-            header {
-                padding: 0.8rem 1rem;
-            }
-
-            h1 {
-                font-size: 1.1rem;
-            }
-
-            .subtitle {
-                font-size: 0.75rem;
-            }
-        }
-
-        #map {
-            flex: 1;
-            width: 100%;
-        }
-
-        .info-window {
-            max-width: 300px;
-            font-size: 14px;
-        }
-
-        .info-window h3 {
-            margin: 0 0 10px 0;
-            color: #333;
-            font-size: 16px;
-            font-weight: 600;
-        }
-
-        .info-window .field {
-            margin: 5px 0;
-            padding: 5px 0;
-            border-bottom: 1px solid #eee;
-        }
-
-        .info-window .field:last-child {
-            border-bottom: none;
-        }
-
-        .info-window .label {
-            font-weight: 600;
-            color: #555;
-            margin-right: 5px;
-        }
-
-        .info-window .value {
-            color: #333;
-        }
-
-        .hubspot-button {
-            display: inline-block;
-            margin-top: 12px;
-            padding: 10px 16px;
-            background: #ff7a59;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            font-weight: 600;
-            font-size: 13px;
-            text-align: center;
-            transition: background 0.2s;
-        }
-
-        .hubspot-button:hover {
-            background: #ff5c39;
-        }
-
-        .hubspot-button:before {
-            content: '🔗 ';
-        }
-
-        .loading {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 2rem 3rem;
-            border-radius: 10px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            z-index: 1000;
-            text-align: center;
-        }
-
-        .loading.hidden {
-            display: none;
-        }
-
-        .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 1rem;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            header { padding: 0.6rem 1rem; }
+            h1 { font-size: 1.1rem; }
+            .subtitle { font-size: 0.75rem; }
         }
 
         .stats {
             background: white;
-            padding: 0.8rem 2rem;
+            padding: 0.5rem 2rem;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+        .stats-item { display: flex; align-items: center; gap: 0.5rem; }
+        .stats-number { font-weight: 700; color: #667eea; font-size: 1.1rem; }
+
+        @media (max-width: 768px) {
+            .stats { padding: 0.4rem 0.8rem; font-size: 0.75rem; }
+            .stats-number { font-size: 0.95rem; }
         }
 
-        .stats-item {
+        /* ---- Main layout: sidebar + map ---- */
+        .main-container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ---- Job list sidebar (desktop) ---- */
+        #job-list-panel {
+            width: 340px;
+            min-width: 260px;
+            max-width: 50vw;
+            background: white;
+            border-right: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+        #job-list-panel .panel-header {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+            flex-shrink: 0;
+        }
+        #job-list-panel .panel-header h3 {
+            font-size: 14px; font-weight: 600; color: #333; margin-bottom: 6px;
+        }
+        #job-search {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 13px;
+            outline: none;
+        }
+        #job-search:focus { border-color: #667eea; }
+        #job-search-clear {
+            position: absolute;
+            right: 22px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #999;
+            font-size: 16px;
+            display: none;
+            background: none; border: none; padding: 2px 4px;
+        }
+        .search-wrapper { position: relative; }
+
+        #showing-count {
+            font-size: 11px; color: #888; margin-top: 4px;
+        }
+
+        #job-list {
+            flex: 1;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        .job-row {
+            padding: 8px 12px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 8px;
+            transition: background 0.15s;
+        }
+        .job-row:hover { background: #f5f5ff; }
+        .job-row .type-badge {
+            display: inline-block;
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            border: 1px solid #999;
+        }
+        .job-row .job-info { flex: 1; min-width: 0; }
+        .job-row .job-name {
+            font-weight: 600; color: #333;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .job-row .job-detail {
+            color: #777; font-size: 11px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .job-row .job-date {
+            flex-shrink: 0; font-size: 11px; color: #999; white-space: nowrap;
         }
 
-        .stats-number {
-            font-weight: 700;
-            color: #667eea;
-            font-size: 1.2rem;
+        /* Resize handle */
+        #panel-resize {
+            width: 5px;
+            cursor: col-resize;
+            background: transparent;
+            flex-shrink: 0;
+            z-index: 11;
         }
+        #panel-resize:hover { background: #667eea33; }
 
-        /* Mobile stats optimization */
+        #map { flex: 1; min-width: 0; }
+
+        /* ---- Mobile: bottom drawer ---- */
         @media (max-width: 768px) {
-            .stats {
-                padding: 0.5rem 0.8rem;
-                font-size: 0.75rem;
-                gap: 0.8rem;
+            .main-container { flex-direction: column; }
+            #job-list-panel {
+                width: 100% !important; min-width: 0; max-width: 100vw;
+                border-right: none;
+                border-top: 1px solid #ddd;
+                position: absolute;
+                bottom: 0; left: 0; right: 0;
+                height: 44px;
+                max-height: 60vh;
+                transition: height 0.3s ease;
+                border-radius: 12px 12px 0 0;
+                box-shadow: 0 -2px 10px rgba(0,0,0,0.15);
             }
-
-            .stats-item {
-                gap: 0.3rem;
+            #job-list-panel.expanded { height: 55vh; }
+            #panel-resize { display: none; }
+            .drawer-handle {
+                display: flex !important;
+                justify-content: center; padding: 6px 0;
+                cursor: pointer;
             }
-
-            .stats-number {
-                font-size: 0.95rem;
+            .drawer-handle-bar {
+                width: 40px; height: 4px;
+                background: #ccc; border-radius: 2px;
             }
+            #map { flex: 1; width: 100%; }
+        }
+        @media (min-width: 769px) {
+            .drawer-handle { display: none !important; }
         }
 
-        .error-message {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            z-index: 1000;
-            max-width: 500px;
-            text-align: center;
-        }
-
-        .error-message.hidden {
-            display: none;
-        }
-
-        .error-message h3 {
-            color: #e74c3c;
-            margin-bottom: 1rem;
-        }
-
-        .error-message code {
-            display: block;
-            background: #f5f5f5;
-            padding: 1rem;
-            border-radius: 5px;
-            margin-top: 1rem;
-            text-align: left;
-            font-size: 0.85rem;
-            overflow-x: auto;
-        }
-
+        /* ---- Legend / Filter panel ---- */
         .map-legend {
             background: white;
-            padding: 10px;
+            padding: 8px;
             margin: 8px;
             border-radius: 6px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            font-size: 13px;
-            max-width: 200px;
+            font-family: inherit;
+            font-size: 12px;
+            max-width: 220px;
+            max-height: calc(100vh - 180px);
+            overflow-y: auto;
         }
-
-        .map-legend h3 {
-            margin: 0 0 8px 0;
-            font-size: 14px;
+        .map-legend h3 { margin: 0 0 6px 0; font-size: 13px; font-weight: 600; color: #333; }
+        .legend-section {
+            margin-bottom: 2px;
+        }
+        .legend-section-head {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 4px 0;
             font-weight: 600;
-            color: #333;
+            font-size: 11px;
+            color: #555;
+            user-select: none;
+        }
+        .legend-section-head .arrow {
+            display: inline-block;
+            width: 12px;
+            font-size: 10px;
+            transition: transform 0.2s;
+            flex-shrink: 0;
+        }
+        .legend-section-head.open .arrow { transform: rotate(90deg); }
+        .legend-section-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.25s ease;
+        }
+        .legend-section-body.open {
+            max-height: 600px;
         }
 
         .legend-item {
             display: flex;
             align-items: center;
-            margin: 5px 0;
+            margin: 3px 0;
             cursor: pointer;
             line-height: 1.2;
+            padding-left: 12px;
         }
-
         .filter-checkbox {
-            margin-right: 6px;
+            margin-right: 5px;
             cursor: pointer;
-            width: 14px;
-            height: 14px;
+            width: 13px; height: 13px;
             flex-shrink: 0;
         }
-
         .legend-icon {
-            width: 16px;
-            height: 16px;
+            width: 14px; height: 14px;
             border-radius: 50%;
-            margin-right: 6px;
+            margin-right: 5px;
             border: 1.5px solid #666;
             flex-shrink: 0;
         }
 
-        /* Mobile optimizations */
         @media (max-width: 768px) {
             .map-legend {
-                padding: 8px;
-                margin: 5px;
-                font-size: 11px;
-                max-width: 160px;
+                padding: 6px; margin: 4px;
+                font-size: 10px; max-width: 170px;
             }
-
-            .map-legend h3 {
-                font-size: 12px;
-                margin: 0 0 6px 0;
-            }
-
-            .legend-item {
-                margin: 3px 0;
-            }
-
-            .filter-checkbox {
-                width: 12px;
-                height: 12px;
-                margin-right: 4px;
-            }
-
-            .legend-icon {
-                width: 12px;
-                height: 12px;
-                margin-right: 4px;
-                border: 1px solid #666;
-            }
-
-            .legend-item span {
-                font-size: 10px;
-            }
+            .legend-icon { width: 11px; height: 11px; margin-right: 3px; border-width: 1px; }
+            .filter-checkbox { width: 11px; height: 11px; margin-right: 3px; }
+            .legend-section-head { font-size: 10px; }
         }
 
-        .legend-icon.blue {
-            background-color: #2196F3;
-        }
-
-        .legend-icon.orange {
-            background-color: #FF9800;
-        }
-
-        .legend-icon.yellow {
-            background-color: #FFEB3B;
-        }
-
-        .legend-icon.green {
-            background-color: #4CAF50;
-        }
-
-        .legend-icon.red {
-            background-color: #F44336;
-        }
-
-        .legend-icon.purple {
-            background-color: #9C27B0;
-        }
-
-        .legend-icon.pink {
-            background-color: #E91E63;
-        }
-
-        .legend-icon.cyan {
-            background-color: #00BCD4;
-        }
-
-        .legend-icon.lightgreen {
-            background-color: #FFEB3B; /* Yellow - same as marker color */
-        }
-
-        .legend-icon.nathans {
-            background-color: #795548; /* Brown - Nathans jobs */
-        }
-
-        .legend-icon.may2026 {
-            background-color: #607D8B; /* Blue grey - May 2026+ (contract from 1 Mar 2026) */
-        }
-
-        .legend-icon.hmSeries {
-            background-color: #9C27B0; /* HM10 / HM15 / HM20 bundled */
-        }
+        .legend-icon.blue { background-color: #2196F3; }
+        .legend-icon.orange { background-color: #FF9800; }
+        .legend-icon.yellow { background-color: #FFEB3B; }
+        .legend-icon.green { background-color: #4CAF50; }
+        .legend-icon.hmSeries { background-color: #9C27B0; }
+        .legend-icon.lightgreen { background-color: #FFEB3B; }
+        .legend-icon.nathans { background-color: #795548; }
+        .legend-icon.may2026 { background-color: #607D8B; }
 
         .legend-battery-heading {
-            margin: 8px 0 4px 0;
-            font-size: 12px;
-            font-weight: 600;
-            color: #555;
+            margin: 4px 0 2px 12px;
+            font-size: 11px; font-weight: 600; color: #555;
+        }
+
+        /* ---- Info window enhancements ---- */
+        .info-window { max-width: 320px; font-size: 13px; }
+        .info-window h3 { margin: 0 0 8px 0; color: #333; font-size: 15px; font-weight: 600; }
+        .info-window .field { margin: 4px 0; padding: 4px 0; border-bottom: 1px solid #eee; }
+        .info-window .field:last-child { border-bottom: none; }
+        .info-window .label { font-weight: 600; color: #555; margin-right: 4px; }
+        .info-window .value { color: #333; }
+        .info-window .type-badge-inline {
+            display: inline-block; padding: 1px 8px;
+            border-radius: 10px; font-size: 11px; font-weight: 600;
+            color: white; vertical-align: middle;
+        }
+        .info-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
+        .info-btn {
+            display: inline-block; padding: 7px 12px;
+            border-radius: 5px; font-weight: 600; font-size: 12px;
+            text-align: center; text-decoration: none;
+            cursor: pointer; border: none; transition: opacity 0.2s;
+        }
+        .info-btn:hover { opacity: 0.85; }
+        .hubspot-button { background: #ff7a59; color: white; }
+        .copy-btn { background: #667eea; color: white; }
+        .directions-btn { background: #4CAF50; color: white; }
+
+        /* ---- Loading / Error ---- */
+        .loading {
+            position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: white; padding: 2rem 3rem;
+            border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            z-index: 1000; text-align: center;
+        }
+        .loading.hidden { display: none; }
+        .spinner {
+            border: 3px solid #f3f3f3; border-top: 3px solid #667eea;
+            border-radius: 50%; width: 40px; height: 40px;
+            animation: spin 1s linear infinite; margin: 0 auto 1rem;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .error-message {
+            position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: white; padding: 2rem; border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            z-index: 1000; max-width: 500px; text-align: center;
+        }
+        .error-message.hidden { display: none; }
+        .error-message h3 { color: #e74c3c; margin-bottom: 1rem; }
+        .error-message code {
+            display: block; background: #f5f5f5; padding: 1rem;
+            border-radius: 5px; margin-top: 1rem; text-align: left;
+            font-size: 0.85rem; overflow-x: auto;
         }
     </style>
 </head>
@@ -370,7 +347,24 @@
         </div>
     </div>
 
-    <div id="map"></div>
+    <div class="main-container">
+        <div id="job-list-panel">
+            <div class="drawer-handle" id="drawer-handle">
+                <div class="drawer-handle-bar"></div>
+            </div>
+            <div class="panel-header">
+                <h3>Job List</h3>
+                <div class="search-wrapper">
+                    <input type="text" id="job-search" placeholder="Search suburb or postcode...">
+                    <button id="job-search-clear">&times;</button>
+                </div>
+                <div id="showing-count">Showing 0 of 0 jobs</div>
+            </div>
+            <div id="job-list"></div>
+        </div>
+        <div id="panel-resize"></div>
+        <div id="map"></div>
+    </div>
 
     <div class="loading" id="loading">
         <div class="spinner"></div>
@@ -382,87 +376,71 @@
         <p id="errorText"></p>
     </div>
 
+    <script src="https://unpkg.com/@googlemaps/markerclusterer@2.5.3/dist/index.min.js"></script>
     <script>
-        // ========================================
-        // CONFIGURATION - REPLACE THESE VALUES
-        // ========================================
-        
         const CONFIG = {
-            // Get this from: https://console.cloud.google.com/
             GOOGLE_MAPS_API_KEY: 'AIzaSyD0p3J2nqCRJNJg7pWDHjqfbR2JUfyVnto',
-            
-            // Your Google Sheets ID from the URL
-            // Example: https://docs.google.com/spreadsheets/d/SPREADSHEET_ID_HERE/edit
             GOOGLE_SHEETS_ID: '1qDcE1j41nkvyP1TWEa3T_E_A1ZXzFWeVJH8bNaHi390',
-            
-            // The name of your sheet/tab (default is usually "Sheet1")
             SHEET_NAME: 'Sheet1',
-            
-            // Column mapping - adjust these to match your spreadsheet columns
-            // Use 0 for column A, 1 for column B, 2 for column C, etc.
             COLUMNS: {
-                recordId: 0,          // Column A - Record ID
-                customerName: 1,      // Column B - Customer Name
-                projectAddress: 2,    // Column C - Project Address
-                latitude: 3,          // Column D - Latitude
-                longitude: 4,         // Column E - Longitude
-                systemSize: 5,        // Column F - System Size [kW]
-                batterySize: 6,       // Column G - Battery Size [kWh]
-                phases: 7,            // Column H - Phases
-                batteryLocation: 8,   // Column I - Battery Location
-                installationDateRaw: 9,  // Column J - Installation date_raw
-                installationDate: 10,    // Column K - Installation Date
-                systemType: 11,          // Column L - Type of System
-                batteryManufacturer: 12, // Column M - Battery Manufacturer (Sheet1)
-                inverterModel: 13,       // Column N - Inverter Model
-                siteInspection: 14,      // Column O - Site Inspection Needed (YES/NO)
-                contractDate: 15         // Column P - Contract Date
+                recordId: 0,
+                customerName: 1,
+                projectAddress: 2,
+                latitude: 3,
+                longitude: 4,
+                systemSize: 5,
+                batterySize: 6,
+                phases: 7,
+                batteryLocation: 8,
+                installationDateRaw: 9,
+                installationDate: 10,
+                systemType: 11,
+                batteryManufacturer: 12,
+                inverterModel: 13,
+                siteInspection: 14,
+                contractDate: 15,
+                phases2: 16
             },
-
-            // Nathans tab: Status (FIXED/NOT FIXED). Use 13 if that sheet has no Battery Manufacturer column; use 14 if it matches Sheet1 layout
             NATHANS_STATUS_COLUMN: 13,
-            
-            // Default map center (will auto-adjust to show all markers)
-            DEFAULT_CENTER: { lat: -33.8688, lng: 151.2093 }, // Sydney, Australia
+            DEFAULT_CENTER: { lat: -33.8688, lng: 151.2093 },
             DEFAULT_ZOOM: 10
         };
 
         // ========================================
-        // APPLICATION CODE
+        // APPLICATION STATE
         // ========================================
 
         let map;
         let markers = [];
-        /** Core marker buckets; Battery Only uses dynamic keys mfg_* added at runtime */
+        let markerClusterer = null;
         let markersByType = {
-            'blue': [],
-            'orange': [],
-            'yellow': [],
-            'green': [],
-            'hmSeries': [],
-            'may2026': [],
-            'lightgreen': [],
-            'nathans': []
+            'blue': [], 'orange': [], 'yellow': [], 'green': [],
+            'hmSeries': [], 'may2026': [], 'lightgreen': [], 'nathans': []
         };
         let systemTypeCounts = {
-            'blue': 0,
-            'orange': 0,
-            'yellow': 0,
-            'green': 0,
-            'hmSeries': 0,
-            'may2026': 0,
-            'lightgreen': 0,
-            'nathans': 0
+            'blue': 0, 'orange': 0, 'yellow': 0, 'green': 0,
+            'hmSeries': 0, 'may2026': 0, 'lightgreen': 0, 'nathans': 0
         };
-        let batteryManufacturerKeys = []; // ordered keys mfg_*
-        let batteryManufacturerLabels = {}; // key -> display label
+        let batteryManufacturerKeys = [];
+        let batteryManufacturerLabels = {};
         let infoWindow;
         let legendElement;
-        let jobsWithDates = []; // Track jobs with contract dates for oldest identification
+        let jobsWithDates = [];
 
-        // Distinct marker icon colors for battery manufacturers (Google Maps ms icons)
+        // Per-marker metadata for cross-cutting filters
+        const markerMeta = new Map();
+        // All job data for the list panel
+        let allJobEntries = [];
+        let searchTerm = '';
+
         const MFG_MARKER_ICONS = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'ltblue'];
         const MFG_LEGEND_HEX = ['#F44336', '#FF9800', '#FFEB3B', '#4CAF50', '#2196F3', '#9C27B0', '#E91E63', '#00BCD4'];
+
+        const TYPE_COLOR_MAP = {
+            'blue': '#2196F3', 'orange': '#FF9800', 'yellow': '#FFEB3B',
+            'green': '#4CAF50', 'hmSeries': '#9C27B0', 'may2026': '#607D8B',
+            'lightgreen': '#FFEB3B', 'nathans': '#795548'
+        };
 
         function isBatteryOnly(systemType) {
             const t = (systemType || '').toLowerCase().trim();
@@ -476,7 +454,33 @@
             return slug ? 'mfg_' + slug : 'mfg_unknown';
         }
 
-        /** Scan Sheet1 rows for Battery Only jobs; build per-manufacturer legend and marker buckets */
+        function getPhaseLabel(row, isLeads, isNathans) {
+            if (isLeads) return '';
+            const p2 = (row[CONFIG.COLUMNS.phases2] || '').trim();
+            if (p2) return p2;
+            const p = (row[CONFIG.COLUMNS.phases] || '').toString().trim();
+            if (p === '1' || p.toLowerCase().includes('single')) return 'Single Phase';
+            if (p === '3' || p.toLowerCase().includes('3') || p.toLowerCase().includes('three')) return '3 Phase';
+            return '';
+        }
+
+        function parseSuburb(address) {
+            if (!address) return '';
+            const parts = address.split(',').map(s => s.trim());
+            if (parts.length >= 3) return parts[parts.length - 3];
+            if (parts.length >= 2) return parts[parts.length - 2];
+            return parts[0];
+        }
+
+        function formatContractDate(row) {
+            const raw = row[CONFIG.COLUMNS.contractDate];
+            if (!raw) return '';
+            const d = new Date(raw);
+            if (isNaN(d.getTime())) return '';
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+        }
+
         function prepareBatteryManufacturerFilters(rows) {
             const seen = new Map();
             rows.forEach(row => {
@@ -495,272 +499,300 @@
             batteryManufacturerKeys.forEach(k => {
                 markersByType[k] = [];
                 systemTypeCounts[k] = 0;
+                TYPE_COLOR_MAP[k] = MFG_LEGEND_HEX[batteryManufacturerKeys.indexOf(k) % MFG_LEGEND_HEX.length];
             });
+        }
 
-            const container = document.getElementById('legend-battery-manufacturers');
-            if (!container) return;
+        function buildBatteryMfgLegend(container) {
             container.innerHTML = '';
-            if (batteryManufacturerKeys.length === 0) {
-                container.style.display = 'none';
-                return;
-            }
+            if (batteryManufacturerKeys.length === 0) { container.style.display = 'none'; return; }
             container.style.display = 'block';
             const heading = document.createElement('div');
             heading.className = 'legend-battery-heading';
-            heading.textContent = 'Battery only (by manufacturer)';
+            heading.textContent = 'Battery only (by mfg)';
             container.appendChild(heading);
             batteryManufacturerKeys.forEach((key, i) => {
                 const hex = MFG_LEGEND_HEX[i % MFG_LEGEND_HEX.length];
                 const label = batteryManufacturerLabels[key];
                 const item = document.createElement('div');
                 item.className = 'legend-item';
-                const cb = document.createElement('input');
-                cb.type = 'checkbox';
-                cb.className = 'filter-checkbox';
-                cb.id = 'filter-' + key;
-                cb.checked = true;
-                const icon = document.createElement('div');
-                icon.className = 'legend-icon';
-                icon.style.backgroundColor = hex;
-                icon.style.border = '1.5px solid #666';
-                const span = document.createElement('span');
-                span.appendChild(document.createTextNode(label + ' '));
-                const cnt = document.createElement('span');
-                cnt.id = 'count-' + key;
-                cnt.textContent = '(0)';
-                span.appendChild(cnt);
-                item.appendChild(cb);
-                item.appendChild(icon);
-                item.appendChild(span);
+                item.innerHTML = `<input type="checkbox" class="filter-checkbox" id="filter-${key}" checked>
+                    <div class="legend-icon" style="background-color:${hex};border:1.5px solid #666"></div>
+                    <span>${escapeHtml(label)} <span id="count-${key}">(0)</span></span>`;
                 container.appendChild(item);
             });
         }
 
-        // Initialize the map
+        // ========================================
+        // MAP INIT
+        // ========================================
+
         function initMap() {
             map = new google.maps.Map(document.getElementById('map'), {
                 zoom: CONFIG.DEFAULT_ZOOM,
                 center: CONFIG.DEFAULT_CENTER,
-                minZoom: 7, // Prevent zooming out too far (keeps focus on Australia/NSW region)
-                styles: [
-                    {
-                        featureType: 'poi',
-                        elementType: 'labels',
-                        stylers: [{ visibility: 'off' }]
-                    }
-                ]
+                minZoom: 7,
+                styles: [{ featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] }]
             });
-
             infoWindow = new google.maps.InfoWindow();
+            map.addListener('click', () => infoWindow.close());
 
-            // Close info window when clicking on the map
-            map.addListener('click', () => {
-                infoWindow.close();
-            });
+            buildLegend();
 
-            // Add legend to map
+            document.getElementById('stats').addEventListener('click', () => infoWindow.close());
+
+            setupPanelResize();
+            setupDrawerHandle();
+            setupSearch();
+
+            loadSheetData();
+        }
+
+        // ========================================
+        // LEGEND (collapsible sections)
+        // ========================================
+
+        function buildLegend() {
             legendElement = document.createElement('div');
             legendElement.className = 'map-legend';
             legendElement.innerHTML = `
-                <h3>System Types</h3>
-                <div class="legend-item">
-                    <input type="checkbox" id="filter-blue" class="filter-checkbox">
-                    <div class="legend-icon blue"></div>
-                    <span>📅 Scheduled Jobs <span id="count-blue">(0)</span></span>
+                <h3>Filters</h3>
+                <div class="legend-section">
+                    <div class="legend-section-head open" data-section="jobtype"><span class="arrow">&#9654;</span> Job Type</div>
+                    <div class="legend-section-body open" id="sec-jobtype">
+                        <div class="legend-item"><input type="checkbox" class="filter-checkbox" id="filter-yellow" checked><div class="legend-icon yellow"></div><span>Solar Only <span id="count-yellow">(0)</span></span></div>
+                        <div class="legend-item"><input type="checkbox" class="filter-checkbox" id="filter-green" checked><div class="legend-icon green"></div><span>Solar & Battery <span id="count-green">(0)</span></span></div>
+                        <div id="legend-battery-manufacturers"></div>
+                    </div>
                 </div>
-                <div class="legend-item">
-                    <input type="checkbox" id="filter-orange" class="filter-checkbox" checked>
-                    <div class="legend-icon orange"></div>
-                    <span>⚠️ Site Inspection <span id="count-orange">(0)</span></span>
+                <div class="legend-section">
+                    <div class="legend-section-head" data-section="phases"><span class="arrow">&#9654;</span> Phases</div>
+                    <div class="legend-section-body" id="sec-phases">
+                        <div class="legend-item"><input type="checkbox" class="filter-checkbox phase-filter" id="filter-phase-single" checked><span>Single Phase <span id="count-phase-single">(0)</span></span></div>
+                        <div class="legend-item"><input type="checkbox" class="filter-checkbox phase-filter" id="filter-phase-3" checked><span>3 Phase <span id="count-phase-3">(0)</span></span></div>
+                    </div>
                 </div>
-                <div class="legend-item">
-                    <input type="checkbox" id="filter-yellow" class="filter-checkbox" checked>
-                    <div class="legend-icon yellow"></div>
-                    <span>Solar Only <span id="count-yellow">(0)</span></span>
+                <div class="legend-section">
+                    <div class="legend-section-head" data-section="special"><span class="arrow">&#9654;</span> Special</div>
+                    <div class="legend-section-body" id="sec-special">
+                        <div class="legend-item"><input type="checkbox" class="filter-checkbox" id="filter-orange" checked><div class="legend-icon orange"></div><span>Site Inspection <span id="count-orange">(0)</span></span></div>
+                        <div class="legend-item"><input type="checkbox" class="filter-checkbox" id="filter-hmSeries"><div class="legend-icon hmSeries"></div><span>HM10/15/20 <span id="count-hmSeries">(0)</span></span></div>
+                        <div class="legend-item"><input type="checkbox" class="filter-checkbox" id="filter-may2026" checked><div class="legend-icon may2026"></div><span>May 2026+ <span id="count-may2026">(0)</span></span></div>
+                    </div>
                 </div>
-                <div class="legend-item">
-                    <input type="checkbox" id="filter-green" class="filter-checkbox" checked>
-                    <div class="legend-icon green"></div>
-                    <span>Solar & Battery <span id="count-green">(0)</span></span>
-                </div>
-                <div class="legend-item">
-                    <input type="checkbox" id="filter-hmSeries" class="filter-checkbox">
-                    <div class="legend-icon hmSeries"></div>
-                    <span>HM10 / HM15 / HM20 <span id="count-hmSeries">(0)</span></span>
-                </div>
-                <div class="legend-item">
-                    <input type="checkbox" id="filter-may2026" class="filter-checkbox" checked>
-                    <div class="legend-icon may2026"></div>
-                    <span>📆 May 2026+ <span id="count-may2026">(0)</span></span>
-                </div>
-                <div id="legend-battery-manufacturers"></div>
-                <hr style="margin: 8px 0; border: 0; border-top: 1px solid #ddd;">
-                <div class="legend-item">
-                    <input type="checkbox" id="filter-lightgreen" class="filter-checkbox">
-                    <div class="legend-icon lightgreen"></div>
-                    <span>💡 LEADS <span id="count-lightgreen">(0)</span></span>
-                </div>
-                <div class="legend-item">
-                    <input type="checkbox" id="filter-nathans" class="filter-checkbox">
-                    <div class="legend-icon nathans"></div>
-                    <span>👷 Nathans <span id="count-nathans">(0)</span></span>
+                <div class="legend-section">
+                    <div class="legend-section-head" data-section="other"><span class="arrow">&#9654;</span> Other Views</div>
+                    <div class="legend-section-body" id="sec-other">
+                        <div class="legend-item"><input type="checkbox" class="filter-checkbox" id="filter-blue"><div class="legend-icon blue"></div><span>Scheduled <span id="count-blue">(0)</span></span></div>
+                        <div class="legend-item"><input type="checkbox" class="filter-checkbox" id="filter-lightgreen"><div class="legend-icon lightgreen"></div><span>LEADS <span id="count-lightgreen">(0)</span></span></div>
+                        <div class="legend-item"><input type="checkbox" class="filter-checkbox" id="filter-nathans"><div class="legend-icon nathans"></div><span>Nathans <span id="count-nathans">(0)</span></span></div>
+                    </div>
                 </div>
             `;
-            
-            // Filter checkboxes (including dynamic manufacturer rows) — event delegation
+
+            // Section collapse/expand
+            legendElement.querySelectorAll('.legend-section-head').forEach(head => {
+                head.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    head.classList.toggle('open');
+                    const body = head.nextElementSibling;
+                    body.classList.toggle('open');
+                });
+            });
+
+            // Filter event delegation
             legendElement.addEventListener('change', (e) => {
                 const checkbox = e.target;
-                if (!checkbox.classList || !checkbox.classList.contains('filter-checkbox')) return;
+                if (!checkbox.classList.contains('filter-checkbox')) return;
                 e.stopPropagation();
+
+                if (checkbox.classList.contains('phase-filter')) {
+                    applyAllFilters();
+                    return;
+                }
+
                 const color = checkbox.id.replace(/^filter-/, '');
                 const exclusiveFilters = ['lightgreen', 'nathans'];
                 if (exclusiveFilters.includes(color) && checkbox.checked) {
                     const allOthers = ['blue', 'orange', 'yellow', 'green', 'hmSeries', 'may2026', ...batteryManufacturerKeys, ...exclusiveFilters.filter(c => c !== color)];
-                    allOthers.forEach(otherColor => {
-                        const otherCheckbox = legendElement.querySelector(`#filter-${otherColor}`);
-                        if (otherCheckbox) {
-                            otherCheckbox.checked = false;
-                            (markersByType[otherColor] || []).forEach(marker => marker.setVisible(false));
-                        }
+                    allOthers.forEach(oc => {
+                        const cb = legendElement.querySelector(`#filter-${oc}`);
+                        if (cb) { cb.checked = false; (markersByType[oc] || []).forEach(m => m.setVisible(false)); }
                     });
                 } else if (!exclusiveFilters.includes(color) && checkbox.checked) {
-                    exclusiveFilters.forEach(exclusiveColor => {
-                        const exclusiveCheckbox = legendElement.querySelector(`#filter-${exclusiveColor}`);
-                        if (exclusiveCheckbox && exclusiveCheckbox.checked) {
-                            exclusiveCheckbox.checked = false;
-                            (markersByType[exclusiveColor] || []).forEach(marker => marker.setVisible(false));
-                        }
+                    exclusiveFilters.forEach(ec => {
+                        const cb = legendElement.querySelector(`#filter-${ec}`);
+                        if (cb && cb.checked) { cb.checked = false; (markersByType[ec] || []).forEach(m => m.setVisible(false)); }
                     });
                 }
-                toggleMarkersByType(color, checkbox.checked);
+
+                applyAllFilters();
             });
-            
-            // Prevent closing info window when clicking on legend (except checkboxes)
+
             legendElement.addEventListener('click', (e) => {
-                if (!e.target.classList.contains('filter-checkbox')) {
+                if (!e.target.classList.contains('filter-checkbox') && !e.target.classList.contains('legend-section-head')) {
                     e.stopPropagation();
                 }
             });
-            
+
             map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(legendElement);
-
-            // Close info window when clicking on stats bar or header
-            document.getElementById('stats').addEventListener('click', () => {
-                infoWindow.close();
-            });
-
-            // Load data from Google Sheets
-            loadSheetData();
         }
 
-        // Load data from Google Sheets
+        // ========================================
+        // FILTERING (color + phase + search)
+        // ========================================
+
+        function applyAllFilters() {
+            const singleOn = document.getElementById('filter-phase-single')?.checked ?? true;
+            const threeOn = document.getElementById('filter-phase-3')?.checked ?? true;
+            const lowerSearch = searchTerm.toLowerCase();
+
+            markers.forEach(marker => {
+                const meta = markerMeta.get(marker);
+                if (!meta) return;
+
+                const typeCheckbox = document.getElementById(`filter-${meta.color}`);
+                const typeOn = typeCheckbox ? typeCheckbox.checked : true;
+
+                let phaseOn = true;
+                if (meta.phase === 'Single Phase') phaseOn = singleOn;
+                else if (meta.phase === '3 Phase') phaseOn = threeOn;
+
+                let searchOn = true;
+                if (lowerSearch && meta.address) {
+                    searchOn = meta.address.toLowerCase().includes(lowerSearch);
+                }
+
+                marker.setVisible(typeOn && phaseOn && searchOn);
+            });
+
+            if (markerClusterer) updateClusterer();
+            updateSelectedCount();
+            updateJobList();
+        }
+
+        function toggleMarkersByType(color, show) {
+            applyAllFilters();
+            if (!show) infoWindow.close();
+        }
+
+        // ========================================
+        // COUNTS
+        // ========================================
+
+        function updateSelectedCount() {
+            let total = 0;
+            markers.forEach(marker => {
+                if (!marker.getVisible()) return;
+                const meta = markerMeta.get(marker);
+                if (!meta) return;
+                const excl = ['lightgreen', 'nathans', 'blue'];
+                if (!excl.includes(meta.color)) total++;
+            });
+            document.getElementById('selectedJobs').textContent = total;
+        }
+
+        function updateLegendCounts() {
+            if (!legendElement) return;
+            const keys = ['blue', 'orange', 'yellow', 'green', 'hmSeries', 'may2026', 'lightgreen', 'nathans'];
+            keys.forEach(k => {
+                const el = legendElement.querySelector(`#count-${k}`);
+                if (el) el.textContent = `(${systemTypeCounts[k] || 0})`;
+            });
+            batteryManufacturerKeys.forEach(key => {
+                const el = legendElement.querySelector(`#count-${key}`);
+                if (el) el.textContent = `(${systemTypeCounts[key] || 0})`;
+            });
+
+            // Phase counts
+            let singleCount = 0, threeCount = 0;
+            markerMeta.forEach(meta => {
+                if (meta.phase === 'Single Phase') singleCount++;
+                else if (meta.phase === '3 Phase') threeCount++;
+            });
+            const sc = legendElement.querySelector('#count-phase-single');
+            const tc = legendElement.querySelector('#count-phase-3');
+            if (sc) sc.textContent = `(${singleCount})`;
+            if (tc) tc.textContent = `(${threeCount})`;
+        }
+
+        // ========================================
+        // MARKER CLUSTERING
+        // ========================================
+
+        function initClusterer() {
+            if (typeof markerClusterer !== 'undefined' && markerClusterer) {
+                markerClusterer.clearMarkers();
+            }
+            const visibleMarkers = markers.filter(m => m.getVisible());
+            if (window.markerClusterer && window.markerClusterer.MarkerClusterer) {
+                markerClusterer = new window.markerClusterer.MarkerClusterer({ map, markers: visibleMarkers });
+            }
+        }
+
+        function updateClusterer() {
+            if (!markerClusterer) return;
+            markerClusterer.clearMarkers();
+            const visibleMarkers = markers.filter(m => m.getVisible());
+            markerClusterer.addMarkers(visibleMarkers);
+        }
+
+        // ========================================
+        // DATA LOADING
+        // ========================================
+
         async function loadSheetData() {
             try {
-                // Check if API keys are configured
-                if (CONFIG.GOOGLE_MAPS_API_KEY === 'YOUR_GOOGLE_MAPS_API_KEY_HERE' || 
+                if (CONFIG.GOOGLE_MAPS_API_KEY === 'YOUR_GOOGLE_MAPS_API_KEY_HERE' ||
                     CONFIG.GOOGLE_SHEETS_ID === 'YOUR_GOOGLE_SHEETS_ID_HERE') {
                     showError('Please update the configuration in index.html with your Google Maps API Key and Sheets ID.');
                     return;
                 }
 
-                // Fetch all sheets
-                const unscheduledUrl = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEETS_ID}/values/${CONFIG.SHEET_NAME}?key=${CONFIG.GOOGLE_MAPS_API_KEY}`;
-                const scheduledUrl = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEETS_ID}/values/Scheduled Jobs - Not yet Installed?key=${CONFIG.GOOGLE_MAPS_API_KEY}`;
-                const leadsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEETS_ID}/values/LEADS?key=${CONFIG.GOOGLE_MAPS_API_KEY}`;
-                const nathansUrl = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEETS_ID}/values/Nathans?key=${CONFIG.GOOGLE_MAPS_API_KEY}`;
-                
-                // Fetch unscheduled jobs
-                const unscheduledResponse = await fetch(unscheduledUrl);
-                if (!unscheduledResponse.ok) {
-                    throw new Error(`Failed to fetch unscheduled data: ${unscheduledResponse.status} ${unscheduledResponse.statusText}`);
-                }
+                const base = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.GOOGLE_SHEETS_ID}/values/`;
+                const key = `?key=${CONFIG.GOOGLE_MAPS_API_KEY}`;
+
+                const unscheduledResponse = await fetch(base + CONFIG.SHEET_NAME + key);
+                if (!unscheduledResponse.ok) throw new Error(`Failed to fetch unscheduled data: ${unscheduledResponse.status}`);
                 const unscheduledData = await unscheduledResponse.json();
-                
-                // Fetch scheduled jobs (may not exist, so handle gracefully)
+
                 let scheduledData = null;
-                try {
-                    const scheduledResponse = await fetch(scheduledUrl);
-                    if (scheduledResponse.ok) {
-                        scheduledData = await scheduledResponse.json();
-                    }
-                } catch (schedError) {
-                    console.log('Scheduled Jobs sheet not found or empty, continuing without it');
-                }
-                
-                // Fetch LEADS (may not exist, so handle gracefully)
+                try { const r = await fetch(base + 'Scheduled Jobs - Not yet Installed' + key); if (r.ok) scheduledData = await r.json(); } catch(e) {}
+
                 let leadsData = null;
-                try {
-                    const leadsResponse = await fetch(leadsUrl);
-                    if (leadsResponse.ok) {
-                        leadsData = await leadsResponse.json();
-                    }
-                } catch (leadsError) {
-                    console.log('LEADS sheet not found or empty, continuing without it');
-                }
-                
-                // Fetch Nathans (may not exist, so handle gracefully)
+                try { const r = await fetch(base + 'LEADS' + key); if (r.ok) leadsData = await r.json(); } catch(e) {}
+
                 let nathansData = null;
-                try {
-                    const nathansResponse = await fetch(nathansUrl);
-                    if (nathansResponse.ok) {
-                        nathansData = await nathansResponse.json();
-                    }
-                } catch (nathansError) {
-                    console.log('Nathans sheet not found or empty, continuing without it');
-                }
-                
-                // Process unscheduled jobs (Sheet1) — discover Battery Only manufacturers first
+                try { const r = await fetch(base + 'Nathans' + key); if (r.ok) nathansData = await r.json(); } catch(e) {}
+
                 if (unscheduledData.values && unscheduledData.values.length > 0) {
-                    const unscheduledRows = unscheduledData.values.slice(1); // Skip header
-                    prepareBatteryManufacturerFilters(unscheduledRows);
-                    processJobData(unscheduledRows, false, false, false, false); // isScheduled=false, isLeads=false, isNathans=false, skipReset=false
+                    const rows = unscheduledData.values.slice(1);
+                    prepareBatteryManufacturerFilters(rows);
+                    buildBatteryMfgLegend(document.getElementById('legend-battery-manufacturers'));
+                    processJobData(rows, false, false, false, false);
                 }
-                
-                // Process scheduled jobs (Scheduled Jobs - Not yet Installed)
-                if (scheduledData && scheduledData.values && scheduledData.values.length > 0) {
-                    const scheduledRows = scheduledData.values.slice(1); // Skip header
-                    processJobData(scheduledRows, true, false, false, true); // isScheduled=true, isLeads=false, isNathans=false, skipReset=true
+
+                if (scheduledData?.values?.length > 0) {
+                    processJobData(scheduledData.values.slice(1), true, false, false, true);
                 }
-                
-                // Process LEADS
-                if (leadsData && leadsData.values && leadsData.values.length > 0) {
-                    const leadsRows = leadsData.values.slice(1); // Skip header
-                    console.log(`Loading LEADS sheet with ${leadsRows.length} rows`);
-                    console.log('First LEADS row:', leadsRows[0]);
-                    console.log('LEADS lat/lng from first row:', {
-                        lat: leadsRows[0][CONFIG.COLUMNS.latitude],
-                        lng: leadsRows[0][CONFIG.COLUMNS.longitude],
-                        recordId: leadsRows[0][CONFIG.COLUMNS.recordId],
-                        customerName: leadsRows[0][CONFIG.COLUMNS.customerName]
-                    });
-                    processJobData(leadsRows, false, true, false, true); // isScheduled=false, isLeads=true, isNathans=false, skipReset=true
-                    console.log(`Created ${markersByType.lightgreen.length} LEADS markers`);
+
+                if (leadsData?.values?.length > 0) {
+                    processJobData(leadsData.values.slice(1), false, true, false, true);
                 }
-                
-                // Process Nathans
-                if (nathansData && nathansData.values && nathansData.values.length > 0) {
-                    const nathansRows = nathansData.values.slice(1); // Skip header
-                    processJobData(nathansRows, false, false, true, true); // isScheduled=false, isLeads=false, isNathans=true, skipReset=true
+
+                if (nathansData?.values?.length > 0) {
+                    processJobData(nathansData.values.slice(1), false, false, true, true);
                 }
-                
-                if ((!unscheduledData.values || unscheduledData.values.length === 0) && 
-                    (!scheduledData || !scheduledData.values || scheduledData.values.length === 0) &&
-                    (!leadsData || !leadsData.values || leadsData.values.length === 0) &&
-                    (!nathansData || !nathansData.values || nathansData.values.length === 0)) {
-                    showError('No data found in any spreadsheet.');
-                    return;
-                }
-                
-                // Finalize map after processing all data
+
+                if (!markers.length) { showError('No data found in any spreadsheet.'); return; }
+
                 finalizeMap();
-                
             } catch (error) {
                 console.error('Error loading sheet data:', error);
                 showError(`Error loading data: ${error.message}`);
             }
         }
 
-        // Solar Only / Solar & Battery only (Battery Only uses manufacturer keys)
         function getMarkerColor(systemType) {
             if (!systemType) return 'green';
             const type = systemType.toLowerCase().trim();
@@ -769,7 +801,6 @@
             return 'green';
         }
 
-        // Get marker icon URL based on color
         function getMarkerIcon(color, isOldest = false) {
             let iconColor = color;
             if (color === 'hmSeries') iconColor = 'purple';
@@ -781,196 +812,77 @@
                 iconColor = MFG_MARKER_ICONS[(idx >= 0 ? idx : 0) % MFG_MARKER_ICONS.length];
             }
             const iconUrl = `http://maps.google.com/mapfiles/ms/icons/${iconColor}-dot.png`;
-            
-            // If this is one of the oldest jobs, make it larger
             if (isOldest) {
                 return {
                     url: iconUrl,
-                    scaledSize: new google.maps.Size(50, 50), // Larger size
+                    scaledSize: new google.maps.Size(50, 50),
                     origin: new google.maps.Point(0, 0),
-                    anchor: new google.maps.Point(25, 50) // Adjust anchor for larger size
+                    anchor: new google.maps.Point(25, 50)
                 };
             }
-            
             return iconUrl;
         }
 
-        // Toggle markers visibility by type
-        function toggleMarkersByType(color, show) {
-            console.log(`Toggling ${color} markers to ${show ? 'visible' : 'hidden'}, count: ${markersByType[color].length}`);
-            
-            markersByType[color].forEach(marker => {
-                marker.setVisible(show);
-            });
-            
-            // Close info window if currently open marker is being hidden
-            if (!show) {
-                infoWindow.close();
+        function getColorHex(color) {
+            if (TYPE_COLOR_MAP[color]) return TYPE_COLOR_MAP[color];
+            if (color && color.indexOf('mfg_') === 0) {
+                const idx = batteryManufacturerKeys.indexOf(color);
+                return MFG_LEGEND_HEX[(idx >= 0 ? idx : 0) % MFG_LEGEND_HEX.length];
             }
-            
-            // If showing markers, re-fit map to visible markers
-            if (show) {
-                setTimeout(() => {
-                    const visibleMarkers = markers.filter(marker => marker.getVisible());
-                    console.log(`Re-fitting map to ${visibleMarkers.length} visible markers`);
-                    
-                    if (visibleMarkers.length > 0) {
-                        const bounds = new google.maps.LatLngBounds();
-                        visibleMarkers.forEach(marker => {
-                            bounds.extend(marker.getPosition());
-                        });
-                        
-                        if (visibleMarkers.length === 1) {
-                            map.setCenter(visibleMarkers[0].getPosition());
-                            map.setZoom(15);
-                        } else {
-                            map.fitBounds(bounds);
-                            
-                            // Ensure minimum zoom level
-                            google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
-                                const currentZoom = map.getZoom();
-                                if (currentZoom < 8) {
-                                    map.setZoom(8);
-                                }
-                            });
-                        }
-                    }
-                }, 100); // Small delay to ensure visibility is set
-            }
-            
-            // Update selected count
-            updateSelectedCount();
-        }
-        
-        // Update the selected jobs count based on checked filters
-        function updateSelectedCount() {
-            let selectedTotal = 0;
-            
-            const checkboxes = ['orange', 'yellow', 'green', 'hmSeries', 'may2026', 'nathans'];
-            checkboxes.forEach(color => {
-                const checkbox = document.getElementById(`filter-${color}`);
-                if (checkbox && checkbox.checked) {
-                    selectedTotal += systemTypeCounts[color] || 0;
-                }
-            });
-            batteryManufacturerKeys.forEach(color => {
-                const checkbox = document.getElementById(`filter-${color}`);
-                if (checkbox && checkbox.checked) {
-                    selectedTotal += systemTypeCounts[color] || 0;
-                }
-            });
-            
-            document.getElementById('selectedJobs').textContent = selectedTotal;
+            return '#999';
         }
 
-        // Update legend counts
-        function updateLegendCounts() {
-            if (!legendElement) return;
-            
-            const blueCount = legendElement.querySelector('#count-blue');
-            const orangeCount = legendElement.querySelector('#count-orange');
-            const yellowCount = legendElement.querySelector('#count-yellow');
-            const greenCount = legendElement.querySelector('#count-green');
-            const hmSeriesCount = legendElement.querySelector('#count-hmSeries');
-            const may2026Count = legendElement.querySelector('#count-may2026');
-            const lightgreenCount = legendElement.querySelector('#count-lightgreen');
-            const nathansCount = legendElement.querySelector('#count-nathans');
-            
-            if (blueCount) blueCount.textContent = `(${systemTypeCounts.blue})`;
-            if (orangeCount) orangeCount.textContent = `(${systemTypeCounts.orange})`;
-            if (yellowCount) yellowCount.textContent = `(${systemTypeCounts.yellow})`;
-            if (greenCount) greenCount.textContent = `(${systemTypeCounts.green})`;
-            if (hmSeriesCount) hmSeriesCount.textContent = `(${systemTypeCounts.hmSeries})`;
-            if (may2026Count) may2026Count.textContent = `(${systemTypeCounts.may2026})`;
-            if (lightgreenCount) lightgreenCount.textContent = `(${systemTypeCounts.lightgreen})`;
-            if (nathansCount) nathansCount.textContent = `(${systemTypeCounts.nathans})`;
-            batteryManufacturerKeys.forEach(key => {
-                const el = legendElement.querySelector(`#count-${key}`);
-                if (el) el.textContent = `(${systemTypeCounts[key] || 0})`;
-            });
-        }
+        // ========================================
+        // PROCESS JOB DATA
+        // ========================================
 
-        // Process job data and create markers
         function processJobData(rows, isScheduled = false, isLeads = false, isNathans = false, skipReset = false) {
             const bounds = new google.maps.LatLngBounds();
             let validCount = 0;
 
-            // Reset counts and arrays only on first call
             if (!skipReset) {
-                systemTypeCounts.blue = 0;
-                systemTypeCounts.orange = 0;
-                systemTypeCounts.yellow = 0;
-                systemTypeCounts.green = 0;
-                systemTypeCounts.hmSeries = 0;
-                systemTypeCounts.may2026 = 0;
-                systemTypeCounts.lightgreen = 0;
-                systemTypeCounts.nathans = 0;
-                markersByType.blue = [];
-                markersByType.orange = [];
-                markersByType.yellow = [];
-                markersByType.green = [];
-                markersByType.hmSeries = [];
-                markersByType.may2026 = [];
-                markersByType.lightgreen = [];
-                markersByType.nathans = [];
-                batteryManufacturerKeys.forEach(k => {
+                ['blue','orange','yellow','green','hmSeries','may2026','lightgreen','nathans'].forEach(k => {
                     systemTypeCounts[k] = 0;
                     markersByType[k] = [];
                 });
+                batteryManufacturerKeys.forEach(k => { systemTypeCounts[k] = 0; markersByType[k] = []; });
                 jobsWithDates = [];
+                allJobEntries = [];
             }
 
             rows.forEach((row, index) => {
-                // LEADS has different column structure: A=RecordID, B=Address, C=Lat, D=Lng
-                // Nathans and other sheets: A=RecordID, B=CustomerName, C=Address, D=Lat, E=Lng
                 let lat, lng;
                 if (isLeads) {
-                    lat = parseFloat(row[2]); // Column C
-                    lng = parseFloat(row[3]); // Column D
+                    lat = parseFloat(row[2]);
+                    lng = parseFloat(row[3]);
                 } else {
-                    lat = parseFloat(row[CONFIG.COLUMNS.latitude]); // Column D
-                    lng = parseFloat(row[CONFIG.COLUMNS.longitude]); // Column E
+                    lat = parseFloat(row[CONFIG.COLUMNS.latitude]);
+                    lng = parseFloat(row[CONFIG.COLUMNS.longitude]);
                 }
+                if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
 
-                // Validate coordinates
-                if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
-                    if (isLeads && index < 3) {
-                        console.warn(`Skipping LEADS row ${index + 2}: Invalid coordinates. Lat=${row[2]}, Lng=${row[3]}`, row);
-                    }
-                    return;
-                }
-
-                // Parse contract date for May2026 color logic (no filtering)
                 let contractDateMs = null;
                 if (!isLeads && row[CONFIG.COLUMNS.contractDate]) {
-                    const contractDate = new Date(row[CONFIG.COLUMNS.contractDate]);
-                    if (!isNaN(contractDate.getTime())) {
-                        contractDateMs = contractDate.getTime();
-                    }
+                    const cd = new Date(row[CONFIG.COLUMNS.contractDate]);
+                    if (!isNaN(cd.getTime())) contractDateMs = cd.getTime();
                 }
 
                 const position = { lat, lng };
-                
-                // Determine marker color based on source sheet and properties
                 let markerColor;
-                
+
                 if (isLeads) {
-                    // Priority 0: LEADS (from "LEADS" sheet)
                     markerColor = 'lightgreen';
                 } else if (isNathans) {
-                    // Priority 0b: Nathans (from "Nathans" sheet)
                     markerColor = 'nathans';
                 } else if (isScheduled) {
-                    // Priority 1: Scheduled Jobs (from "Scheduled Jobs - Not yet Installed" sheet)
                     markerColor = 'blue';
                 } else {
-                    // For unscheduled jobs, check contract date first, then other properties
                     const siteInspection = row[CONFIG.COLUMNS.siteInspection] || '';
                     const systemType = row[CONFIG.COLUMNS.systemType] || '';
                     const inverterModel = row[CONFIG.COLUMNS.inverterModel] || '';
-                    const mar1_2026 = new Date(2026, 2, 1, 0, 0, 0).getTime(); // 1 March 2026 (month 2 = March)
-                    
-                    if (contractDateMs !== null && contractDateMs >= mar1_2026) {
+                    const mar1 = new Date(2026, 2, 1, 0, 0, 0).getTime();
+
+                    if (contractDateMs !== null && contractDateMs >= mar1) {
                         markerColor = 'may2026';
                     } else if (siteInspection && siteInspection.toUpperCase().trim() === 'YES') {
                         markerColor = 'orange';
@@ -982,161 +894,111 @@
                         markerColor = getMarkerColor(systemType);
                     }
                 }
-                
-                // Create marker title (must be before debug log)
+
                 const markerTitle = isLeads ? (row[1] || `Lead ${index + 1}`) : (row[CONFIG.COLUMNS.customerName] || `Job ${index + 1}`);
-                
-                // Debug: log first few jobs
-                if (index < 5 || (isLeads && index < 3)) {
-                    console.log(`Row ${index}: IsLeads = ${isLeads}, IsScheduled = ${isScheduled}, Color = ${markerColor}, Lat = ${lat}, Lng = ${lng}, Title = ${markerTitle}`);
-                }
-                
-                // Create marker
+                const phase = getPhaseLabel(row, isLeads, isNathans);
+                const address = isLeads ? (row[1] || '') : (row[CONFIG.COLUMNS.projectAddress] || '');
+
                 const marker = new google.maps.Marker({
-                    position: position,
-                    map: map,
-                    title: markerTitle,
+                    position, map, title: markerTitle,
                     animation: google.maps.Animation.DROP,
                     icon: getMarkerIcon(markerColor)
                 });
 
-                // Create info window content
-                const content = createInfoWindowContent(row, index, isLeads, isNathans);
+                const content = createInfoWindowContent(row, index, isLeads, isNathans, lat, lng, markerColor);
+                marker.addListener('click', () => { infoWindow.setContent(content); infoWindow.open(map, marker); });
 
-                // Add click listener
-                marker.addListener('click', () => {
-                    infoWindow.setContent(content);
-                    infoWindow.open(map, marker);
-                });
+                markerMeta.set(marker, { color: markerColor, phase, address, row });
 
                 markers.push(marker);
-                if (!markersByType[markerColor]) {
-                    markersByType[markerColor] = [];
-                    systemTypeCounts[markerColor] = 0;
-                }
+                if (!markersByType[markerColor]) { markersByType[markerColor] = []; systemTypeCounts[markerColor] = 0; }
                 markersByType[markerColor].push(marker);
                 systemTypeCounts[markerColor]++;
                 bounds.extend(position);
                 validCount++;
-                
-                // Track jobs with contract dates for oldest identification
+
+                // Job list entry
+                const excl = ['lightgreen', 'nathans', 'blue'];
+                if (!excl.includes(markerColor)) {
+                    allJobEntries.push({
+                        marker, markerColor, phase, address,
+                        name: markerTitle,
+                        suburb: parseSuburb(address),
+                        contractDate: contractDateMs,
+                        contractDateFormatted: formatContractDate(row),
+                        systemType: isLeads ? '' : (row[CONFIG.COLUMNS.systemType] || ''),
+                        content
+                    });
+                }
+
                 const isOldestEligible = markerColor === 'yellow' || markerColor === 'green' || markerColor === 'hmSeries' ||
                     (markerColor && markerColor.indexOf('mfg_') === 0);
                 if (isOldestEligible && row[CONFIG.COLUMNS.contractDate]) {
-                    const contractDate = new Date(row[CONFIG.COLUMNS.contractDate]);
-                    if (!isNaN(contractDate.getTime())) {
-                        jobsWithDates.push({
-                            marker: marker,
-                            contractDate: contractDate,
-                            color: markerColor
-                        });
-                    }
+                    const cd = new Date(row[CONFIG.COLUMNS.contractDate]);
+                    if (!isNaN(cd.getTime())) jobsWithDates.push({ marker, contractDate: cd, color: markerColor });
                 }
             });
 
             return { bounds, validCount };
         }
 
-        // Finalize map after all data is loaded
+        // ========================================
+        // FINALIZE
+        // ========================================
+
         function finalizeMap() {
             let totalJobs = systemTypeCounts.orange + systemTypeCounts.yellow +
                 systemTypeCounts.green + systemTypeCounts.hmSeries + systemTypeCounts.may2026;
-            batteryManufacturerKeys.forEach(k => {
-                totalJobs += systemTypeCounts[k] || 0;
-            });
-            
-            // Update stats (only unscheduled jobs)
+            batteryManufacturerKeys.forEach(k => { totalJobs += systemTypeCounts[k] || 0; });
             document.getElementById('totalJobs').textContent = totalJobs;
 
-            // Update legend with counts
-            console.log('Final counts:', systemTypeCounts);
             updateLegendCounts();
 
-            // Identify and highlight the 5 oldest jobs (solar types, HM series, battery-by-manufacturer)
             if (jobsWithDates.length > 0) {
-                // Sort by contract date (oldest first)
                 jobsWithDates.sort((a, b) => a.contractDate - b.contractDate);
-                
-                // Take the oldest 5
-                const oldestJobs = jobsWithDates.slice(0, 5);
-                
-                // Update their markers to be larger
-                oldestJobs.forEach(job => {
-                    job.marker.setIcon(getMarkerIcon(job.color, true)); // Pass true for isOldest
+                jobsWithDates.slice(0, 5).forEach(job => {
+                    job.marker.setIcon(getMarkerIcon(job.color, true));
                 });
-                
-                console.log('Highlighted 5 oldest jobs:', oldestJobs.map(j => ({
-                    date: j.contractDate.toISOString().split('T')[0],
-                    color: j.color
-                })));
             }
 
-            // Hide blue, HM series, lightgreen (LEADS), and nathans markers by default (checkboxes start unchecked)
-            markersByType.blue.forEach(marker => {
-                marker.setVisible(false);
-            });
-            markersByType.hmSeries.forEach(marker => {
-                marker.setVisible(false);
-            });
-            markersByType.lightgreen.forEach(marker => {
-                marker.setVisible(false);
-            });
-            markersByType.nathans.forEach(marker => {
-                marker.setVisible(false);
+            // Default-hidden types
+            ['blue', 'hmSeries', 'lightgreen', 'nathans'].forEach(k => {
+                (markersByType[k] || []).forEach(m => m.setVisible(false));
             });
 
-            // Fit map to visible markers only (after hiding default-hidden markers)
-            const visibleMarkers = markers.filter(marker => marker.getVisible());
-            
-            if (visibleMarkers.length > 0) {
+            // Fit bounds to visible
+            const visible = markers.filter(m => m.getVisible());
+            if (visible.length > 0) {
                 const bounds = new google.maps.LatLngBounds();
-                visibleMarkers.forEach(marker => {
-                    bounds.extend(marker.getPosition());
-                });
-                
-                if (visibleMarkers.length === 1) {
-                    map.setCenter(visibleMarkers[0].getPosition());
-                    map.setZoom(15);
-                } else {
+                visible.forEach(m => bounds.extend(m.getPosition()));
+                if (visible.length === 1) { map.setCenter(visible[0].getPosition()); map.setZoom(15); }
+                else {
                     map.fitBounds(bounds);
-                    
-                    // Ensure minimum zoom level (don't zoom out too far)
                     google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
-                        const currentZoom = map.getZoom();
-                        if (currentZoom < 8) { // Minimum zoom to keep focus on Sydney region
-                            map.setZoom(8);
-                        }
+                        if (map.getZoom() < 8) map.setZoom(8);
                     });
                 }
-            } else {
-                // No visible markers, center on Sydney
-                map.setCenter(CONFIG.DEFAULT_CENTER);
-                map.setZoom(10);
             }
 
-            // Update selected count based on checked filters
             updateSelectedCount();
+            initClusterer();
+            updateJobList();
 
-            // Hide loading
             document.getElementById('loading').classList.add('hidden');
         }
 
-        // Create info window HTML content
-        function createInfoWindowContent(row, index, isLeads = false, isNathans = false) {
+        // ========================================
+        // INFO WINDOW (enriched)
+        // ========================================
+
+        function createInfoWindowContent(row, index, isLeads, isNathans, lat, lng, markerColor) {
             let recordId, customerName, projectAddress, systemSize, batterySize, phases, batteryLocation, status;
-            
+
             if (isLeads) {
-                // LEADS columns: A=RecordID, B=Address, C=Lat, D=Lng
-                recordId = row[0] || '';
-                customerName = 'Lead'; // LEADS don't have customer names yet
+                recordId = row[0] || ''; customerName = 'Lead';
                 projectAddress = row[1] || '';
-                systemSize = '';
-                batterySize = '';
-                phases = '';
-                batteryLocation = '';
-                status = '';
+                systemSize = ''; batterySize = ''; phases = ''; batteryLocation = ''; status = '';
             } else if (isNathans) {
-                // Nathans columns: same as Scheduled Jobs, plus N=Status (FIXED/NOT FIXED)
                 recordId = row[CONFIG.COLUMNS.recordId] || '';
                 customerName = row[CONFIG.COLUMNS.customerName] || 'Unknown';
                 projectAddress = row[CONFIG.COLUMNS.projectAddress] || '';
@@ -1146,7 +1008,6 @@
                 batteryLocation = row[CONFIG.COLUMNS.batteryLocation] || '';
                 status = row[CONFIG.NATHANS_STATUS_COLUMN] || '';
             } else {
-                // Standard columns (Sheet1 layout includes Battery Manufacturer)
                 recordId = row[CONFIG.COLUMNS.recordId] || '';
                 customerName = row[CONFIG.COLUMNS.customerName] || 'Unknown Customer';
                 projectAddress = row[CONFIG.COLUMNS.projectAddress] || '';
@@ -1158,105 +1019,205 @@
             }
 
             const batteryManufacturer = (!isLeads && !isNathans) ? (row[CONFIG.COLUMNS.batteryManufacturer] || '') : '';
+            const inverterModel = (!isLeads) ? (row[CONFIG.COLUMNS.inverterModel] || '') : '';
+            const systemType = (!isLeads) ? (row[CONFIG.COLUMNS.systemType] || '') : '';
+            const contractDateStr = formatContractDate(row);
+            const phaseLabel = getPhaseLabel(row, isLeads, isNathans);
+            const colorHex = getColorHex(markerColor);
 
             let html = `<div class="info-window">`;
             html += `<h3>${escapeHtml(customerName)}</h3>`;
-            
-            if (projectAddress) {
-                html += `<div class="field">
-                    <span class="label">📍 Address:</span>
-                    <span class="value">${escapeHtml(projectAddress)}</span>
-                </div>`;
-            }
-            
-            if (systemSize) {
-                html += `<div class="field">
-                    <span class="label">⚡ System Size:</span>
-                    <span class="value">${escapeHtml(systemSize)} kW</span>
-                </div>`;
-            }
-            
-            if (batterySize) {
-                html += `<div class="field">
-                    <span class="label">🔋 Battery Size:</span>
-                    <span class="value">${escapeHtml(batterySize)} kWh</span>
-                </div>`;
-            }
-            
-            if (phases) {
-                html += `<div class="field">
-                    <span class="label">🔌 Phases:</span>
-                    <span class="value">${escapeHtml(phases)}</span>
-                </div>`;
-            }
-            
-            if (batteryLocation) {
-                html += `<div class="field">
-                    <span class="label">📦 Battery Location:</span>
-                    <span class="value">${escapeHtml(batteryLocation)}</span>
-                </div>`;
+
+            if (systemType) {
+                html += `<div class="field"><span class="type-badge-inline" style="background:${colorHex}">${escapeHtml(systemType)}</span>`;
+                if (phaseLabel) html += ` <span style="font-size:11px;color:#777">${escapeHtml(phaseLabel)}</span>`;
+                html += `</div>`;
             }
 
-            if (batteryManufacturer) {
-                html += `<div class="field">
-                    <span class="label">🏭 Battery Manufacturer:</span>
-                    <span class="value">${escapeHtml(batteryManufacturer)}</span>
-                </div>`;
-            }
-            
-            if (status && isNathans) {
-                html += `<div class="field">
-                    <span class="label">📋 Status:</span>
-                    <span class="value">${escapeHtml(status)}</span>
-                </div>`;
-            }
-            
-            // Add HubSpot link button if record ID exists
+            if (projectAddress) html += `<div class="field"><span class="label">Address:</span><span class="value">${escapeHtml(projectAddress)}</span></div>`;
+            if (systemSize) html += `<div class="field"><span class="label">System:</span><span class="value">${escapeHtml(systemSize)} kW</span></div>`;
+            if (batterySize) html += `<div class="field"><span class="label">Battery:</span><span class="value">${escapeHtml(batterySize)} kWh</span></div>`;
+            if (phases) html += `<div class="field"><span class="label">Phases:</span><span class="value">${escapeHtml(phases)}</span></div>`;
+            if (inverterModel) html += `<div class="field"><span class="label">Inverter:</span><span class="value">${escapeHtml(inverterModel)}</span></div>`;
+            if (batteryManufacturer) html += `<div class="field"><span class="label">Battery Mfg:</span><span class="value">${escapeHtml(batteryManufacturer)}</span></div>`;
+            if (batteryLocation) html += `<div class="field"><span class="label">Batt Location:</span><span class="value">${escapeHtml(batteryLocation)}</span></div>`;
+            if (contractDateStr) html += `<div class="field"><span class="label">Contract:</span><span class="value">${contractDateStr}</span></div>`;
+            if (status && isNathans) html += `<div class="field"><span class="label">Status:</span><span class="value">${escapeHtml(status)}</span></div>`;
+
+            html += `<div class="info-actions">`;
             if (recordId) {
                 const hubspotUrl = `https://app-ap1.hubspot.com/contacts/441838848/record/0-3/${recordId}`;
-                html += `<div style="text-align: center; margin-top: 10px;">
-                    <a href="${hubspotUrl}" target="_blank" class="hubspot-button">View in HubSpot</a>
-                </div>`;
+                html += `<a href="${hubspotUrl}" target="_blank" class="info-btn hubspot-button">HubSpot</a>`;
             }
-            
-            html += `</div>`;
+            if (projectAddress) {
+                html += `<button class="info-btn copy-btn" onclick="navigator.clipboard.writeText('${escapeHtml(projectAddress).replace(/'/g, "\\'")}');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Addr',1500)">Copy Addr</button>`;
+            }
+            if (lat && lng) {
+                html += `<a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" class="info-btn directions-btn">Directions</a>`;
+            }
+            html += `</div></div>`;
             return html;
         }
 
-        // Escape HTML to prevent XSS
+        // ========================================
+        // JOB LIST PANEL
+        // ========================================
+
+        function updateJobList() {
+            const listEl = document.getElementById('job-list');
+            const countEl = document.getElementById('showing-count');
+            const lowerSearch = searchTerm.toLowerCase();
+
+            const visibleEntries = allJobEntries.filter(entry => {
+                if (!entry.marker.getVisible()) return false;
+                if (lowerSearch && entry.address && !entry.address.toLowerCase().includes(lowerSearch)) return false;
+                return true;
+            });
+
+            visibleEntries.sort((a, b) => {
+                if (a.contractDate && b.contractDate) return a.contractDate - b.contractDate;
+                if (a.contractDate) return -1;
+                if (b.contractDate) return 1;
+                return 0;
+            });
+
+            countEl.textContent = `Showing ${visibleEntries.length} of ${allJobEntries.length} jobs`;
+
+            const fragment = document.createDocumentFragment();
+            visibleEntries.forEach(entry => {
+                const row = document.createElement('div');
+                row.className = 'job-row';
+                row.innerHTML = `
+                    <div class="type-badge" style="background:${getColorHex(entry.markerColor)}"></div>
+                    <div class="job-info">
+                        <div class="job-name">${escapeHtml(entry.name)}</div>
+                        <div class="job-detail">${escapeHtml(entry.suburb)}${entry.phase ? ' &middot; ' + escapeHtml(entry.phase) : ''}${entry.systemType ? ' &middot; ' + escapeHtml(entry.systemType) : ''}</div>
+                    </div>
+                    <div class="job-date">${entry.contractDateFormatted}</div>
+                `;
+                row.addEventListener('click', () => {
+                    map.panTo(entry.marker.getPosition());
+                    map.setZoom(Math.max(map.getZoom(), 14));
+                    infoWindow.setContent(entry.content);
+                    infoWindow.open(map, entry.marker);
+                    // On mobile, collapse drawer after selecting
+                    if (window.innerWidth <= 768) {
+                        document.getElementById('job-list-panel').classList.remove('expanded');
+                    }
+                });
+                fragment.appendChild(row);
+            });
+
+            listEl.innerHTML = '';
+            listEl.appendChild(fragment);
+        }
+
+        // ========================================
+        // SEARCH
+        // ========================================
+
+        function setupSearch() {
+            const input = document.getElementById('job-search');
+            const clearBtn = document.getElementById('job-search-clear');
+            let debounceTimer;
+
+            input.addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                clearBtn.style.display = input.value ? 'block' : 'none';
+                debounceTimer = setTimeout(() => {
+                    searchTerm = input.value.trim();
+                    applyAllFilters();
+                }, 300);
+            });
+
+            clearBtn.addEventListener('click', () => {
+                input.value = '';
+                clearBtn.style.display = 'none';
+                searchTerm = '';
+                applyAllFilters();
+            });
+        }
+
+        // ========================================
+        // PANEL RESIZE (desktop)
+        // ========================================
+
+        function setupPanelResize() {
+            const handle = document.getElementById('panel-resize');
+            const panel = document.getElementById('job-list-panel');
+            let startX, startW;
+
+            handle.addEventListener('mousedown', (e) => {
+                startX = e.clientX;
+                startW = panel.offsetWidth;
+                document.addEventListener('mousemove', onDrag);
+                document.addEventListener('mouseup', () => document.removeEventListener('mousemove', onDrag), { once: true });
+                e.preventDefault();
+            });
+
+            function onDrag(e) {
+                const newW = Math.max(200, Math.min(window.innerWidth * 0.5, startW + (e.clientX - startX)));
+                panel.style.width = newW + 'px';
+            }
+        }
+
+        // ========================================
+        // DRAWER HANDLE (mobile)
+        // ========================================
+
+        function setupDrawerHandle() {
+            const handle = document.getElementById('drawer-handle');
+            const panel = document.getElementById('job-list-panel');
+
+            handle.addEventListener('click', () => {
+                panel.classList.toggle('expanded');
+            });
+
+            let touchStartY;
+            panel.addEventListener('touchstart', (e) => {
+                if (e.target.closest('#job-list') || e.target.closest('#job-search')) return;
+                touchStartY = e.touches[0].clientY;
+            }, { passive: true });
+
+            panel.addEventListener('touchend', (e) => {
+                if (touchStartY === undefined) return;
+                const diff = touchStartY - e.changedTouches[0].clientY;
+                if (diff > 40) panel.classList.add('expanded');
+                else if (diff < -40) panel.classList.remove('expanded');
+                touchStartY = undefined;
+            }, { passive: true });
+        }
+
+        // ========================================
+        // UTILITIES
+        // ========================================
+
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
 
-        // Show error message
         function showError(message) {
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('errorText').textContent = message;
             document.getElementById('error').classList.remove('hidden');
         }
 
-        // Load Google Maps API
         function loadGoogleMapsScript() {
             if (CONFIG.GOOGLE_MAPS_API_KEY === 'YOUR_GOOGLE_MAPS_API_KEY_HERE') {
                 showError('Please configure your Google Maps API Key in the index.html file.');
                 return;
             }
-
             const script = document.createElement('script');
             script.src = `https://maps.googleapis.com/maps/api/js?key=${CONFIG.GOOGLE_MAPS_API_KEY}&callback=initMap`;
             script.async = true;
             script.defer = true;
-            script.onerror = () => {
-                showError('Failed to load Google Maps. Please check your API key and internet connection.');
-            };
+            script.onerror = () => showError('Failed to load Google Maps. Please check your API key and internet connection.');
             document.head.appendChild(script);
         }
 
-        // Start the application
         window.addEventListener('load', loadGoogleMapsScript);
     </script>
 </body>
 </html>
-
