@@ -576,7 +576,7 @@
             legendElement.className = 'map-legend';
             legendElement.innerHTML = `
                 <h3>Filters</h3>
-                <div class="legend-item" style="margin-bottom:6px"><input type="checkbox" class="filter-checkbox" id="filter-orange" checked><div class="legend-icon orange"></div><span>Site Inspection <span id="count-orange">(0)</span></span></div>
+                <div class="legend-item" style="margin-bottom:6px"><input type="checkbox" class="filter-checkbox" id="filter-orange"><div class="legend-icon orange"></div><span>Site Inspection <span id="count-orange">(0)</span></span></div>
                 <div class="legend-section">
                     <div class="legend-section-head open" data-section="jobtype"><span class="arrow">&#9654;</span> Job Type</div>
                     <div class="legend-section-body open" id="sec-jobtype">
@@ -596,7 +596,7 @@
                 <div class="legend-section">
                     <div class="legend-section-head" data-section="special"><span class="arrow">&#9654;</span> Special</div>
                     <div class="legend-section-body" id="sec-special">
-                        <div class="legend-item"><input type="checkbox" class="filter-checkbox" id="filter-may2026" checked><div class="legend-icon may2026"></div><span>May 2026+ <span id="count-may2026">(0)</span></span></div>
+                        <div class="legend-item"><input type="checkbox" class="filter-checkbox" id="filter-may2026"><div class="legend-icon may2026"></div><span>May 2026+ <span id="count-may2026">(0)</span></span></div>
                     </div>
                 </div>
                 <div class="legend-section">
@@ -977,7 +977,7 @@
             }
 
             // Default-hidden types
-            ['blue', 'lightgreen', 'nathans'].forEach(k => {
+            ['blue', 'orange', 'may2026', 'lightgreen', 'nathans'].forEach(k => {
                 (markersByType[k] || []).forEach(m => m.setVisible(false));
             });
 
