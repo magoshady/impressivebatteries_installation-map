@@ -712,28 +712,30 @@
             document.getElementById('selectedJobs').textContent = total;
         }
 
+        function setCountAndVisibility(el, count) {
+            if (!el) return;
+            el.textContent = `(${count})`;
+            const item = el.closest('.legend-item');
+            if (item) item.style.display = count === 0 ? 'none' : '';
+        }
+
         function updateLegendCounts() {
             if (!legendElement) return;
             const keys = ['blue', 'orange', 'yellow', 'green', 'may2026', 'lightgreen', 'nathans'];
             keys.forEach(k => {
-                const el = legendElement.querySelector(`#count-${k}`);
-                if (el) el.textContent = `(${systemTypeCounts[k] || 0})`;
+                setCountAndVisibility(legendElement.querySelector(`#count-${k}`), systemTypeCounts[k] || 0);
             });
             batteryManufacturerKeys.forEach(key => {
-                const el = legendElement.querySelector(`#count-${key}`);
-                if (el) el.textContent = `(${systemTypeCounts[key] || 0})`;
+                setCountAndVisibility(legendElement.querySelector(`#count-${key}`), systemTypeCounts[key] || 0);
             });
 
-            // Phase counts
             let singleCount = 0, threeCount = 0;
             markerMeta.forEach(meta => {
                 if (meta.phase === 'Single Phase') singleCount++;
                 else if (meta.phase === '3 Phase') threeCount++;
             });
-            const sc = legendElement.querySelector('#count-phase-single');
-            const tc = legendElement.querySelector('#count-phase-3');
-            if (sc) sc.textContent = `(${singleCount})`;
-            if (tc) tc.textContent = `(${threeCount})`;
+            setCountAndVisibility(legendElement.querySelector('#count-phase-single'), singleCount);
+            setCountAndVisibility(legendElement.querySelector('#count-phase-3'), threeCount);
         }
 
         // ========================================
