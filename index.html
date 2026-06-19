@@ -399,12 +399,53 @@
                 inverterModel: 13,
                 siteInspection: 14,
                 contractDate: 15,
-                phases2: 16
+                phases2: 16,
+                dealStage: 17
             },
             NATHANS_STATUS_COLUMN: 13,
             DEFAULT_CENTER: { lat: -33.8688, lng: 151.2093 },
             DEFAULT_ZOOM: 10
         };
+
+        // HubSpot deal-stage internal IDs -> human readable names.
+        // Any ID not listed falls back to showing the raw number.
+        const DEAL_STAGE_MAP = {
+            '1509355998': 'Quote Accepted',
+            '2695936475': 'Design Tasks Started',
+            '1509355999': 'Long Term Install (See Notes)',
+            '1590953464': 'Extra site photos required from customer',
+            '1590958581': 'Site Inspection Required',
+            '2605310398': 'Site Inspection booked in with customer and installer',
+            '1509356001': 'Waiting for Finance Admin',
+            '1697220066': 'Pre-Design Completed by Kris',
+            '1717492213': 'Dwayne to Design',
+            '2783168987': 'Sam to Design',
+            '2045770192': 'On Hold / MSB upgrade',
+            '2519957969': 'On Hold / Waiting on customer',
+            '1509356003': 'On Hold / Awaiting Variation',
+            '3138425279': 'Ready for PTC / waiting on final approval',
+            '1590957507': 'Ready for PTC',
+            '1590953446': 'PTC Submitted',
+            '1509356004': 'PTC Approved - Awaiting Install Date',
+            '1509971388': 'SYDNEY Install date confirmed - Ready to be Installed',
+            '1806230007': 'REGIONAL Install Date confirmed with customer and installer',
+            '1509971389': 'Waiting for reschedule (Incomplete / Not Attended)',
+            '1509971390': 'Solar Complete - Awaiting Battery',
+            '1509971391': 'Battery Installed',
+            '2114714048': 'Job Done - PTC Pending',
+            '1509971392': '95% Complete (Panels & Inverter)',
+            '1879662022': 'Metering forms need to be submitted',
+            '1509971393': 'Install Complete and metering forms submitted for first time PV installations',
+            '1779689928': 'STC has been lodged and customer has paid all invoices in full',
+            '1509971394': 'Metering forms submitted, DER complete & User Manual has been sent'
+        };
+
+        function getDealStageLabel(raw) {
+            const key = (raw || '').toString().trim();
+            if (!key) return '';
+            const mapped = DEAL_STAGE_MAP[key];
+            return (mapped && mapped.trim()) ? mapped : key;
+        }
 
         // ========================================
         // APPLICATION STATE
@@ -1029,6 +1070,7 @@
             const batteryManufacturer = (!isLeads && !isNathans) ? (row[CONFIG.COLUMNS.batteryManufacturer] || '') : '';
             const inverterModel = (!isLeads) ? (row[CONFIG.COLUMNS.inverterModel] || '') : '';
             const systemType = (!isLeads) ? (row[CONFIG.COLUMNS.systemType] || '') : '';
+            const dealStage = (!isLeads && !isNathans) ? getDealStageLabel(row[CONFIG.COLUMNS.dealStage]) : '';
             const contractDateStr = formatContractDate(row);
             const phaseLabel = getPhaseLabel(row, isLeads, isNathans);
             const colorHex = getColorHex(markerColor);
@@ -1042,6 +1084,7 @@
                 html += `</div>`;
             }
 
+            if (dealStage) html += `<div class="field"><span class="label">Deal Stage:</span><span class="value">${escapeHtml(dealStage)}</span></div>`;
             if (projectAddress) html += `<div class="field"><span class="label">Address:</span><span class="value">${escapeHtml(projectAddress)}</span></div>`;
             if (systemSize) html += `<div class="field"><span class="label">System:</span><span class="value">${escapeHtml(systemSize)} kW</span></div>`;
             if (batterySize) html += `<div class="field"><span class="label">Battery:</span><span class="value">${escapeHtml(batterySize)} kWh</span></div>`;
