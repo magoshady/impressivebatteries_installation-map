@@ -263,6 +263,7 @@
         .legend-icon.blue { background-color: #2196F3; }
         .legend-icon.orange { background-color: #FF9800; }
         .legend-icon.pink { background-color: #E91E63; }
+        .legend-icon.purple { background-color: #9C27B0; }
         .legend-icon.yellow { background-color: #FFEB3B; }
         .legend-icon.green { background-color: #4CAF50; }
         
@@ -456,11 +457,11 @@
         /** Clusterer instance (must not be named markerClusterer — conflicts with @googlemaps/markerclusterer UMD global). */
         let clustererInstance = null;
         let markersByType = {
-            'blue': [], 'orange': [], 'pink': [], 'yellow': [], 'green': [],
+            'blue': [], 'orange': [], 'pink': [], 'purple': [], 'yellow': [], 'green': [],
             'lightgreen': [], 'nathans': []
         };
         let systemTypeCounts = {
-            'blue': 0, 'orange': 0, 'pink': 0, 'yellow': 0, 'green': 0,
+            'blue': 0, 'orange': 0, 'pink': 0, 'purple': 0, 'yellow': 0, 'green': 0,
             'lightgreen': 0, 'nathans': 0
         };
         let batteryManufacturerKeys = [];
@@ -498,7 +499,7 @@
 
         const TYPE_COLOR_MAP = {
             'blue': '#2196F3', 'orange': '#FF9800', 'pink': '#E91E63',
-            'yellow': '#FFEB3B', 'green': '#4CAF50',
+            'purple': '#9C27B0', 'yellow': '#FFEB3B', 'green': '#4CAF50',
             'lightgreen': '#FFEB3B', 'nathans': '#795548'
         };
 
@@ -618,7 +619,8 @@
             legendElement.innerHTML = `
                 <h3>Filters</h3>
                 <div class="legend-item" style="margin-bottom:2px"><input type="checkbox" class="filter-checkbox" id="filter-orange"><div class="legend-icon orange"></div><span>Solar Site Inspection <span id="count-orange">(0)</span></span></div>
-                <div class="legend-item" style="margin-bottom:6px"><input type="checkbox" class="filter-checkbox" id="filter-pink"><div class="legend-icon pink"></div><span>Battery Site Inspection <span id="count-pink">(0)</span></span></div>
+                <div class="legend-item" style="margin-bottom:2px"><input type="checkbox" class="filter-checkbox" id="filter-pink"><div class="legend-icon pink"></div><span>Battery Site Inspection <span id="count-pink">(0)</span></span></div>
+                <div class="legend-item" style="margin-bottom:6px"><input type="checkbox" class="filter-checkbox" id="filter-purple"><div class="legend-icon purple"></div><span>Site Inspections Booked/Done - Pending SI Form <span id="count-purple">(0)</span></span></div>
                 <div class="legend-section">
                     <div class="legend-section-head open" data-section="jobtype"><span class="arrow">&#9654;</span> Job Type</div>
                     <div class="legend-section-body open" id="sec-jobtype">
@@ -670,7 +672,7 @@
                 const color = checkbox.id.replace(/^filter-/, '');
                 const exclusiveFilters = ['lightgreen', 'nathans'];
                 if (exclusiveFilters.includes(color) && checkbox.checked) {
-                    const allOthers = ['blue', 'orange', 'pink', 'yellow', 'green', ...batteryManufacturerKeys, ...exclusiveFilters.filter(c => c !== color)];
+                    const allOthers = ['blue', 'orange', 'pink', 'purple', 'yellow', 'green', ...batteryManufacturerKeys, ...exclusiveFilters.filter(c => c !== color)];
                     allOthers.forEach(oc => {
                         const cb = legendElement.querySelector(`#filter-${oc}`);
                         if (cb) { cb.checked = false; (markersByType[oc] || []).forEach(m => m.setVisible(false)); }
@@ -757,7 +759,7 @@
 
         function updateLegendCounts() {
             if (!legendElement) return;
-            const keys = ['blue', 'orange', 'pink', 'yellow', 'green', 'lightgreen', 'nathans'];
+            const keys = ['blue', 'orange', 'pink', 'purple', 'yellow', 'green', 'lightgreen', 'nathans'];
             keys.forEach(k => {
                 setCountAndVisibility(legendElement.querySelector(`#count-${k}`), systemTypeCounts[k] || 0);
             });
@@ -895,7 +897,7 @@
             let validCount = 0;
 
             if (!skipReset) {
-                ['blue','orange','pink','yellow','green','lightgreen','nathans'].forEach(k => {
+                ['blue','orange','pink','purple','yellow','green','lightgreen','nathans'].forEach(k => {
                     systemTypeCounts[k] = 0;
                     markersByType[k] = [];
                 });
@@ -935,7 +937,10 @@
                     const systemType = row[CONFIG.COLUMNS.systemType] || '';
                     const inverterModel = row[CONFIG.COLUMNS.inverterModel] || '';
 
-                    if (siteInspection && siteInspection.toUpperCase().trim() === 'YES') {
+                    const siteInspectionVal = siteInspection.toUpperCase().trim();
+                    if (siteInspectionVal === 'BOOKED') {
+                        markerColor = 'purple';
+                    } else if (siteInspectionVal === 'YES') {
                         markerColor = isBatteryOnly(systemType) ? 'pink' : 'orange';
                     } else if (isBatteryOnly(systemType)) {
                         markerColor = manufacturerToKey(row[CONFIG.COLUMNS.batteryManufacturer] || '');
@@ -997,7 +1002,7 @@
 
         function finalizeMap() {
             let totalJobs = systemTypeCounts.orange + systemTypeCounts.pink +
-                systemTypeCounts.yellow + systemTypeCounts.green;
+                systemTypeCounts.purple + systemTypeCounts.yellow + systemTypeCounts.green;
             batteryManufacturerKeys.forEach(k => { totalJobs += systemTypeCounts[k] || 0; });
             document.getElementById('totalJobs').textContent = totalJobs;
 
@@ -1011,7 +1016,7 @@
             }
 
             // Default-hidden types
-            ['blue', 'orange', 'pink', 'lightgreen', 'nathans'].forEach(k => {
+            ['blue', 'orange', 'pink', 'purple', 'lightgreen', 'nathans'].forEach(k => {
                 (markersByType[k] || []).forEach(m => m.setVisible(false));
             });
 
