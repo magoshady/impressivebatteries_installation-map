@@ -269,6 +269,7 @@
         
         .legend-icon.lightgreen { background-color: #FFEB3B; }
         .legend-icon.nathans { background-color: #795548; }
+        .legend-icon.nswloan { background-color: #F44336; }
 
         .legend-battery-heading {
             margin: 4px 0 2px 12px;
@@ -401,7 +402,8 @@
                 siteInspection: 14,
                 contractDate: 15,
                 phases2: 16,
-                dealStage: 17
+                dealStage: 17,
+                nswProgram: 18
             },
             NATHANS_STATUS_COLUMN: 13,
             DEFAULT_CENTER: { lat: -33.8688, lng: 151.2093 },
@@ -458,11 +460,11 @@
         let clustererInstance = null;
         let markersByType = {
             'blue': [], 'orange': [], 'pink': [], 'purple': [], 'yellow': [], 'green': [],
-            'lightgreen': [], 'nathans': []
+            'lightgreen': [], 'nathans': [], 'nswloan': []
         };
         let systemTypeCounts = {
             'blue': 0, 'orange': 0, 'pink': 0, 'purple': 0, 'yellow': 0, 'green': 0,
-            'lightgreen': 0, 'nathans': 0
+            'lightgreen': 0, 'nathans': 0, 'nswloan': 0
         };
         let batteryManufacturerKeys = [];
         let batteryManufacturerLabels = {};
@@ -500,12 +502,21 @@
         const TYPE_COLOR_MAP = {
             'blue': '#2196F3', 'orange': '#FF9800', 'pink': '#E91E63',
             'purple': '#9C27B0', 'yellow': '#FFEB3B', 'green': '#4CAF50',
-            'lightgreen': '#FFEB3B', 'nathans': '#795548'
+            'lightgreen': '#FFEB3B', 'nathans': '#795548', 'nswloan': '#F44336'
         };
 
         function isBatteryOnly(systemType) {
             const t = (systemType || '').toLowerCase().trim();
             return t.includes('battery only') || t === 'battery only';
+        }
+
+        /** Sheet1 column S — jobs on the combined NSW rebate + NSW loan program. */
+        const NSW_REBATE_LOAN = 'nsw rebate + nsw loan';
+
+        function isNswRebateLoan(row) {
+            const v = (row[CONFIG.COLUMNS.nswProgram] || '').toString()
+                .toLowerCase().replace(/\s+/g, ' ').trim();
+            return v === NSW_REBATE_LOAN;
         }
 
         function manufacturerToKey(raw) {
@@ -640,6 +651,7 @@
                 <div class="legend-section">
                     <div class="legend-section-head" data-section="other"><span class="arrow">&#9654;</span> Other Views</div>
                     <div class="legend-section-body" id="sec-other">
+                        <div class="legend-item"><input type="checkbox" class="filter-checkbox" id="filter-nswloan"><div class="legend-icon nswloan"></div><span>NSW Rebate + NSW Loan <span id="count-nswloan">(0)</span></span></div>
                         <div class="legend-item"><input type="checkbox" class="filter-checkbox" id="filter-blue"><div class="legend-icon blue"></div><span>Scheduled <span id="count-blue">(0)</span></span></div>
                         <div class="legend-item"><input type="checkbox" class="filter-checkbox" id="filter-lightgreen"><div class="legend-icon lightgreen"></div><span>LEADS <span id="count-lightgreen">(0)</span></span></div>
                         <div class="legend-item"><input type="checkbox" class="filter-checkbox" id="filter-nathans"><div class="legend-icon nathans"></div><span>Nathans <span id="count-nathans">(0)</span></span></div>
@@ -672,7 +684,7 @@
                 const color = checkbox.id.replace(/^filter-/, '');
                 const exclusiveFilters = ['lightgreen', 'nathans'];
                 if (exclusiveFilters.includes(color) && checkbox.checked) {
-                    const allOthers = ['blue', 'orange', 'pink', 'purple', 'yellow', 'green', ...batteryManufacturerKeys, ...exclusiveFilters.filter(c => c !== color)];
+                    const allOthers = ['blue', 'orange', 'pink', 'purple', 'yellow', 'green', 'nswloan', ...batteryManufacturerKeys, ...exclusiveFilters.filter(c => c !== color)];
                     allOthers.forEach(oc => {
                         const cb = legendElement.querySelector(`#filter-${oc}`);
                         if (cb) { cb.checked = false; (markersByType[oc] || []).forEach(m => m.setVisible(false)); }
@@ -759,7 +771,7 @@
 
         function updateLegendCounts() {
             if (!legendElement) return;
-            const keys = ['blue', 'orange', 'pink', 'purple', 'yellow', 'green', 'lightgreen', 'nathans'];
+            const keys = ['blue', 'orange', 'pink', 'purple', 'yellow', 'green', 'lightgreen', 'nathans', 'nswloan'];
             keys.forEach(k => {
                 setCountAndVisibility(legendElement.querySelector(`#count-${k}`), systemTypeCounts[k] || 0);
             });
@@ -865,6 +877,7 @@
             let iconColor = color;
             if (color === 'lightgreen') iconColor = 'yellow';
             if (color === 'nathans') iconColor = 'orange';
+            if (color === 'nswloan') iconColor = 'red';
             if (color && color.indexOf('mfg_') === 0) {
                 iconColor = getMfgIcon(color);
             }
@@ -897,7 +910,7 @@
             let validCount = 0;
 
             if (!skipReset) {
-                ['blue','orange','pink','purple','yellow','green','lightgreen','nathans'].forEach(k => {
+                ['blue','orange','pink','purple','yellow','green','lightgreen','nathans','nswloan'].forEach(k => {
                     systemTypeCounts[k] = 0;
                     markersByType[k] = [];
                 });
@@ -942,6 +955,8 @@
                         markerColor = 'purple';
                     } else if (siteInspectionVal === 'YES') {
                         markerColor = isBatteryOnly(systemType) ? 'pink' : 'orange';
+                    } else if (isNswRebateLoan(row)) {
+                        markerColor = 'nswloan';
                     } else if (isBatteryOnly(systemType)) {
                         markerColor = manufacturerToKey(row[CONFIG.COLUMNS.batteryManufacturer] || '');
                     } else {
@@ -986,7 +1001,7 @@
                 }
 
                 const isOldestEligible = markerColor === 'yellow' || markerColor === 'green' ||
-                    (markerColor && markerColor.indexOf('mfg_') === 0);
+                    markerColor === 'nswloan' || (markerColor && markerColor.indexOf('mfg_') === 0);
                 if (isOldestEligible && row[CONFIG.COLUMNS.contractDate]) {
                     const cd = new Date(row[CONFIG.COLUMNS.contractDate]);
                     if (!isNaN(cd.getTime())) jobsWithDates.push({ marker, contractDate: cd, color: markerColor });
@@ -1002,7 +1017,8 @@
 
         function finalizeMap() {
             let totalJobs = systemTypeCounts.orange + systemTypeCounts.pink +
-                systemTypeCounts.purple + systemTypeCounts.yellow + systemTypeCounts.green;
+                systemTypeCounts.purple + systemTypeCounts.yellow + systemTypeCounts.green +
+                systemTypeCounts.nswloan;
             batteryManufacturerKeys.forEach(k => { totalJobs += systemTypeCounts[k] || 0; });
             document.getElementById('totalJobs').textContent = totalJobs;
 
@@ -1016,7 +1032,7 @@
             }
 
             // Default-hidden types
-            ['blue', 'orange', 'pink', 'purple', 'lightgreen', 'nathans'].forEach(k => {
+            ['blue', 'orange', 'pink', 'purple', 'lightgreen', 'nathans', 'nswloan'].forEach(k => {
                 (markersByType[k] || []).forEach(m => m.setVisible(false));
             });
 
@@ -1076,6 +1092,7 @@
             const inverterModel = (!isLeads) ? (row[CONFIG.COLUMNS.inverterModel] || '') : '';
             const systemType = (!isLeads) ? (row[CONFIG.COLUMNS.systemType] || '') : '';
             const dealStage = (!isLeads && !isNathans) ? getDealStageLabel(row[CONFIG.COLUMNS.dealStage]) : '';
+            const nswProgram = (!isLeads && !isNathans) ? (row[CONFIG.COLUMNS.nswProgram] || '').toString().trim() : '';
             const contractDateStr = formatContractDate(row);
             const phaseLabel = getPhaseLabel(row, isLeads, isNathans);
             const colorHex = getColorHex(markerColor);
@@ -1090,6 +1107,7 @@
             }
 
             if (dealStage) html += `<div class="field"><span class="label">Deal Stage:</span><span class="value">${escapeHtml(dealStage)}</span></div>`;
+            if (nswProgram) html += `<div class="field"><span class="label">Program:</span><span class="value">${escapeHtml(nswProgram)}</span></div>`;
             if (projectAddress) html += `<div class="field"><span class="label">Address:</span><span class="value">${escapeHtml(projectAddress)}</span></div>`;
             if (systemSize) html += `<div class="field"><span class="label">System:</span><span class="value">${escapeHtml(systemSize)} kW</span></div>`;
             if (batterySize) html += `<div class="field"><span class="label">Battery:</span><span class="value">${escapeHtml(batterySize)} kWh</span></div>`;
