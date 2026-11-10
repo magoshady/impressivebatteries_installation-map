@@ -270,6 +270,7 @@
         .legend-icon.lightgreen { background-color: #FFEB3B; }
         .legend-icon.nathans { background-color: #795548; }
         .legend-icon.nswloan { background-color: #F44336; }
+        .legend-icon.applied { background-color: #00BCD4; }
 
         .legend-battery-heading {
             margin: 4px 0 2px 12px;
@@ -403,7 +404,8 @@
                 contractDate: 15,
                 phases2: 16,
                 dealStage: 17,
-                nswProgram: 18
+                nswProgram: 18,
+                financeStatus: 19
             },
             NATHANS_STATUS_COLUMN: 13,
             DEFAULT_CENTER: { lat: -33.8688, lng: 151.2093 },
@@ -460,11 +462,11 @@
         let clustererInstance = null;
         let markersByType = {
             'blue': [], 'orange': [], 'pink': [], 'purple': [], 'yellow': [], 'green': [],
-            'lightgreen': [], 'nathans': [], 'nswloan': []
+            'lightgreen': [], 'nathans': [], 'nswloan': [], 'applied': []
         };
         let systemTypeCounts = {
             'blue': 0, 'orange': 0, 'pink': 0, 'purple': 0, 'yellow': 0, 'green': 0,
-            'lightgreen': 0, 'nathans': 0, 'nswloan': 0
+            'lightgreen': 0, 'nathans': 0, 'nswloan': 0, 'applied': 0
         };
         let batteryManufacturerKeys = [];
         let batteryManufacturerLabels = {};
@@ -502,7 +504,7 @@
         const TYPE_COLOR_MAP = {
             'blue': '#2196F3', 'orange': '#FF9800', 'pink': '#E91E63',
             'purple': '#9C27B0', 'yellow': '#FFEB3B', 'green': '#4CAF50',
-            'lightgreen': '#FFEB3B', 'nathans': '#795548', 'nswloan': '#F44336'
+            'lightgreen': '#FFEB3B', 'nathans': '#795548', 'nswloan': '#F44336', 'applied': '#00BCD4'
         };
 
         function isBatteryOnly(systemType) {
@@ -517,6 +519,11 @@
             const v = (row[CONFIG.COLUMNS.nswProgram] || '').toString()
                 .toLowerCase().replace(/\s+/g, ' ').trim();
             return v === NSW_REBATE_LOAN;
+        }
+
+        /** Sheet1 column T — Finance Status. APPLIED jobs get their own colour; APPROVED (and anything else) keep the normal job-type colours. */
+        function isFinanceApplied(row) {
+            return (row[CONFIG.COLUMNS.financeStatus] || '').toString().trim().toUpperCase() === 'APPLIED';
         }
 
         function manufacturerToKey(raw) {
@@ -638,6 +645,7 @@
                     <div class="legend-section-body open" id="sec-jobtype">
                         <div class="legend-item"><input type="checkbox" class="filter-checkbox" id="filter-yellow" checked><div class="legend-icon yellow"></div><span>Solar Only <span id="count-yellow">(0)</span></span></div>
                         <div class="legend-item"><input type="checkbox" class="filter-checkbox" id="filter-green" checked><div class="legend-icon green"></div><span>Solar & Battery <span id="count-green">(0)</span></span></div>
+                        <div class="legend-item"><input type="checkbox" class="filter-checkbox" id="filter-applied" checked><div class="legend-icon applied"></div><span>Finance Applied <span id="count-applied">(0)</span></span></div>
                         <div id="legend-battery-manufacturers"></div>
                     </div>
                 </div>
@@ -684,7 +692,7 @@
                 const color = checkbox.id.replace(/^filter-/, '');
                 const exclusiveFilters = ['lightgreen', 'nathans'];
                 if (exclusiveFilters.includes(color) && checkbox.checked) {
-                    const allOthers = ['blue', 'orange', 'pink', 'purple', 'yellow', 'green', 'nswloan', ...batteryManufacturerKeys, ...exclusiveFilters.filter(c => c !== color)];
+                    const allOthers = ['blue', 'orange', 'pink', 'purple', 'yellow', 'green', 'nswloan', 'applied', ...batteryManufacturerKeys, ...exclusiveFilters.filter(c => c !== color)];
                     allOthers.forEach(oc => {
                         const cb = legendElement.querySelector(`#filter-${oc}`);
                         if (cb) { cb.checked = false; (markersByType[oc] || []).forEach(m => m.setVisible(false)); }
@@ -771,7 +779,7 @@
 
         function updateLegendCounts() {
             if (!legendElement) return;
-            const keys = ['blue', 'orange', 'pink', 'purple', 'yellow', 'green', 'lightgreen', 'nathans', 'nswloan'];
+            const keys = ['blue', 'orange', 'pink', 'purple', 'yellow', 'green', 'lightgreen', 'nathans', 'nswloan', 'applied'];
             keys.forEach(k => {
                 setCountAndVisibility(legendElement.querySelector(`#count-${k}`), systemTypeCounts[k] || 0);
             });
@@ -878,6 +886,7 @@
             if (color === 'lightgreen') iconColor = 'yellow';
             if (color === 'nathans') iconColor = 'orange';
             if (color === 'nswloan') iconColor = 'red';
+            if (color === 'applied') iconColor = 'ltblue';
             if (color && color.indexOf('mfg_') === 0) {
                 iconColor = getMfgIcon(color);
             }
@@ -910,7 +919,7 @@
             let validCount = 0;
 
             if (!skipReset) {
-                ['blue','orange','pink','purple','yellow','green','lightgreen','nathans','nswloan'].forEach(k => {
+                ['blue','orange','pink','purple','yellow','green','lightgreen','nathans','nswloan','applied'].forEach(k => {
                     systemTypeCounts[k] = 0;
                     markersByType[k] = [];
                 });
@@ -957,6 +966,8 @@
                         markerColor = isBatteryOnly(systemType) ? 'pink' : 'orange';
                     } else if (isNswRebateLoan(row)) {
                         markerColor = 'nswloan';
+                    } else if (isFinanceApplied(row)) {
+                        markerColor = 'applied';
                     } else if (isBatteryOnly(systemType)) {
                         markerColor = manufacturerToKey(row[CONFIG.COLUMNS.batteryManufacturer] || '');
                     } else {
@@ -1001,7 +1012,7 @@
                 }
 
                 const isOldestEligible = markerColor === 'yellow' || markerColor === 'green' ||
-                    markerColor === 'nswloan' || (markerColor && markerColor.indexOf('mfg_') === 0);
+                    markerColor === 'nswloan' || markerColor === 'applied' || (markerColor && markerColor.indexOf('mfg_') === 0);
                 if (isOldestEligible && row[CONFIG.COLUMNS.contractDate]) {
                     const cd = new Date(row[CONFIG.COLUMNS.contractDate]);
                     if (!isNaN(cd.getTime())) jobsWithDates.push({ marker, contractDate: cd, color: markerColor });
@@ -1018,7 +1029,7 @@
         function finalizeMap() {
             let totalJobs = systemTypeCounts.orange + systemTypeCounts.pink +
                 systemTypeCounts.purple + systemTypeCounts.yellow + systemTypeCounts.green +
-                systemTypeCounts.nswloan;
+                systemTypeCounts.nswloan + systemTypeCounts.applied;
             batteryManufacturerKeys.forEach(k => { totalJobs += systemTypeCounts[k] || 0; });
             document.getElementById('totalJobs').textContent = totalJobs;
 
