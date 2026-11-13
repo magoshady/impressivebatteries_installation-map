@@ -358,7 +358,7 @@
             <div class="panel-header">
                 <h3>Job List</h3>
                 <div class="search-wrapper">
-                    <input type="text" id="job-search" placeholder="Search suburb or postcode...">
+                    <input type="text" id="job-search" placeholder="Search name, suburb or postcode...">
                     <button id="job-search-clear">&times;</button>
                 </div>
                 <div id="showing-count">Showing 0 of 0 jobs</div>
@@ -737,8 +737,8 @@
                 else if (phaseValue === '3') phaseOn = meta.phase === '3 Phase' || !meta.phase;
 
                 let searchOn = true;
-                if (lowerSearch && meta.address) {
-                    searchOn = meta.address.toLowerCase().includes(lowerSearch);
+                if (lowerSearch) {
+                    searchOn = ((meta.address || '') + ' ' + (meta.name || '')).toLowerCase().includes(lowerSearch);
                 }
 
                 marker.setVisible(typeOn && phaseOn && searchOn);
@@ -988,7 +988,7 @@
                 const content = createInfoWindowContent(row, index, isLeads, isNathans, lat, lng, markerColor);
                 marker.addListener('click', () => { infoWindow.setContent(content); infoWindow.open(map, marker); });
 
-                markerMeta.set(marker, { color: markerColor, phase, address, row });
+                markerMeta.set(marker, { color: markerColor, phase, address, name: markerTitle, row });
 
                 markers.push(marker);
                 if (!markersByType[markerColor]) { markersByType[markerColor] = []; systemTypeCounts[markerColor] = 0; }
@@ -1155,7 +1155,7 @@
 
             const visibleEntries = allJobEntries.filter(entry => {
                 if (!entry.marker.getVisible()) return false;
-                if (lowerSearch && entry.address && !entry.address.toLowerCase().includes(lowerSearch)) return false;
+                if (lowerSearch && !((entry.address || '') + ' ' + (entry.name || '')).toLowerCase().includes(lowerSearch)) return false;
                 return true;
             });
 
