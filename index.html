@@ -44,6 +44,7 @@
             flex-shrink: 0;
         }
         .stats-item { display: flex; align-items: center; gap: 0.5rem; }
+        .stats-item input[type="date"] { font: inherit; padding: 0.1rem 0.3rem; border: 1px solid #ccc; border-radius: 4px; }
         .stats-number { font-weight: 700; color: #667eea; font-size: 1.1rem; }
 
         @media (max-width: 768px) {
@@ -343,6 +344,10 @@
         <div class="stats-item">
             <span>Total Jobs:</span>
             <span class="stats-number" id="totalJobs">0</span>
+        </div>
+        <div class="stats-item">
+            <label for="contractCutoff">Contract Cut Off:</label>
+            <input type="date" id="contractCutoff" value="2026-11-20">
         </div>
         <div class="stats-item">
             <span>Total Selected:</span>
@@ -707,6 +712,8 @@
                 applyAllFilters();
             });
 
+            document.getElementById('contractCutoff').addEventListener('change', () => { infoWindow.close(); applyAllFilters(); });
+
             legendElement.addEventListener('click', (e) => {
                 if (!e.target.classList.contains('filter-checkbox') && !e.target.classList.contains('legend-section-head')) {
                     e.stopPropagation();
@@ -719,6 +726,14 @@
         // ========================================
         // FILTERING (color + phase + search)
         // ========================================
+
+        function isPastContractCutoff(meta) {
+            const v = document.getElementById('contractCutoff').value;
+            if (!v || !meta || meta.contractDate == null) return false;
+            const [y, m, d] = v.split('-').map(Number);
+            const endOfCutoff = new Date(y, m - 1, d, 23, 59, 59, 999).getTime();
+            return meta.contractDate > endOfCutoff;
+        }
 
         function applyAllFilters() {
             const phaseRadio = document.querySelector('input[name="phase-filter"]:checked');
@@ -741,7 +756,7 @@
                     searchOn = ((meta.address || '') + ' ' + (meta.name || '')).toLowerCase().includes(lowerSearch);
                 }
 
-                marker.setVisible(typeOn && phaseOn && searchOn);
+                marker.setVisible(typeOn && phaseOn && searchOn && !isPastContractCutoff(meta));
             });
 
             if (clustererInstance) updateClusterer();
@@ -988,7 +1003,7 @@
                 const content = createInfoWindowContent(row, index, isLeads, isNathans, lat, lng, markerColor);
                 marker.addListener('click', () => { infoWindow.setContent(content); infoWindow.open(map, marker); });
 
-                markerMeta.set(marker, { color: markerColor, phase, address, name: markerTitle, row });
+                markerMeta.set(marker, { color: markerColor, phase, address, name: markerTitle, row, contractDate: contractDateMs });
 
                 markers.push(marker);
                 if (!markersByType[markerColor]) { markersByType[markerColor] = []; systemTypeCounts[markerColor] = 0; }
@@ -1046,6 +1061,9 @@
             ['blue', 'orange', 'pink', 'purple', 'lightgreen', 'nathans', 'nswloan'].forEach(k => {
                 (markersByType[k] || []).forEach(m => m.setVisible(false));
             });
+
+            // Contract cut-off
+            markers.forEach(m => { if (isPastContractCutoff(markerMeta.get(m))) m.setVisible(false); });
 
             // Fit bounds to visible
             const visible = markers.filter(m => m.getVisible());
